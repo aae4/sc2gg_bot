@@ -1,0 +1,797 @@
+<script>
+
+  class Rectangle {
+    constructor(height, width) {
+      this.height = height;
+      this.width = width;
+    }
+
+    get area() {
+      return this.calcArea();
+    }
+
+    calcArea() {
+      return this.height * this.width;
+    }
+  }
+
+  function fmtMSS(s){return(s-(s%=60))/60+(9<s?':':':0')+s}
+
+  var cvs, ctx;
+
+  var UNIT_SIZES = {
+    'workers': 1,
+    'vespene': 2,
+    'army': 1,
+    'minerals': 1,
+    'xelnagas': 2,
+    'buildings': 1
+  }
+
+  // var initPlayer = function(){
+  //   cvs = document.getElementById('replayCanvas')
+
+  //   this.playerConfig['scaleCoeff'] = cvs.offsetWidth/cvs.width;
+  //   cvs.width = cvs.offsetWidth
+  //   cvs.height = cvs.width/ratio
+
+  //   lastX=cvs.width/2
+  //   lastY=cvs.height/2
+
+  //   addEventListenersToElement(cvs)
+  //   trackTransforms(ctx)
+  //   ctx = cvs.getContext('2d');
+  // }
+
+  // var cvs = document.getElementById('replayCanvas')
+  // var ctx = cvs.getContext('2d');
+  // trackTransforms(ctx)
+
+  var parsed_result = replay_data['base_data']
+  var mapInfo = parsed_result['map_details']
+  var timeline = replay_data['timeline']
+  var battles_source = replay_data['battles_source']
+
+  var summary_data = replay_data['graphs_data']['summary_data']
+  var armyChartData =  replay_data['graphs_data']['armyChartData']
+  var workersChartData = replay_data['graphs_data']['workersChartData']
+  var mineralsChartData =  replay_data['graphs_data']['mineralsChartData']
+  var workersActiveChartData =  replay_data['graphs_data']['workersActiveChartData']
+
+  // var width = mapInfo['width']
+  // var height = mapInfo['height']
+  // var ratio =  width/height;
+
+  // var scaleCoeff = 1;
+
+  // var actual_width = mapInfo['actual_width']
+  // var actual_height = mapInfo['actual_height']
+  // ratio = actual_width/actual_height;
+
+  // cvs.width = actual_width;
+  // cvs.height = actual_height;
+
+  // var offsetX = actual_width/width
+  // var offsetY = actual_height/height
+  // var scaleCoeff = cvs.offsetWidth/width;
+
+  // var this.playerConfig['currentSecond'] = 0;
+  var unit_size;
+
+  var drawCommonObjects = function(time, obj_name, config, color, isStroke, isCircle) {
+    for(var i in timeline[time][obj_name]) {
+      drawObject(time, obj_name, timeline[time][obj_name][i], config, color, isStroke, isCircle)
+    }
+  }
+
+  var drawPlayerObjects = function(time, obj_name, config, color, isStroke, isCircle) {
+    for(var i in timeline[time][obj_name]) {
+      pid = i
+      color = 'blue'
+      if (pid == 1){ color = 'red' }
+
+      objs = timeline[time][obj_name][pid]
+
+      for(var k in objs) {
+        drawObject(time, obj_name, objs[k], config, color, isStroke, isCircle)
+      }
+    }
+  }
+
+  var drawObject = function(time, obj_name, obj, config, color, isStroke, isCircle){
+    x = obj[0]*config['offsetX']
+    y = cvs.height - obj[1]*config['offsetY']
+    unit_size = UNIT_SIZES[obj_name]*config['scaleCoeff']
+    // console.log(obj_name, x, y, unit_size)
+    if (isCircle){
+      drawCircle(ctx, config, x, y, unit_size, color, isStroke, isCircle)
+    } else {
+      drawRect(ctx, config, x, y, unit_size, color, isStroke, isCircle)
+    }
+  }
+
+  // var drawObjects = function(time, obj_name, config, color, isStroke, isCircle) {
+  //   for(var i in timeline[time][obj_name]) {
+  //     x = timeline[time][obj_name][i][0]*config['offsetX']
+  //     y = config['actual_height'] - timeline[time][obj_name][i][1]*config['offsetY']
+  //     unit_size = UNIT_SIZES[obj_name]*config['scaleCoeff']
+
+  //     if (isCircle){
+  //       drawCircle(ctx, config, x, y, unit_size, color, isStroke, isCircle)
+  //     } else {
+  //       drawRect(ctx, config, x, y, unit_size, color, isStroke, isCircle)
+  //     }
+  //   }
+  // }
+
+  var drawRect = function(ctx, config, x, y, unit_size, color, isStroke){
+    if (isStroke){
+      ctx.strokeStyle = color
+      ctx.strokeRect(x - unit_size/2, y - unit_size/2, unit_size,unit_size)
+    } else {
+      ctx.fillStyle = color
+      ctx.fillRect(x - unit_size/2, y - unit_size/2, unit_size,unit_size)
+    }
+  }
+
+  var drawCircle = function(ctx, config, x, y, unit_size, color, isStroke){
+    ctx.beginPath();
+    ctx.arc(x, y, unit_size/2, 0, Math.PI*2, true);
+
+    if (isStroke){
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = color
+      ctx.fill();
+    }
+  }
+
+  var drawMinerals = function(time) {
+    for(var i in timeline[time]['minerals']) {
+      x = timeline[time]['minerals'][i][0]
+      y = timeline[time]['minerals'][i][1]
+
+      x = x*offsetX
+      y = actual_height - y*offsetY
+
+      unit_size = UNIT_SIZES['mineral']*scaleCoeff
+
+      // ctx.fillStyle = '#2196f3'
+      ctx.strokeStyle = '#2196f3'
+      ctx.globalAlpha = 0.5
+      ctx.strokeRect(x*scaleCoeff-unit_size/2,y*scaleCoeff-unit_size/2,unit_size,unit_size)
+      // ctx.fillRect(x-1,y-1,2,2)
+    }
+  }
+
+  var drawVespene = function(time) {
+    for(var i in timeline[time]['vespene']) {
+      x = timeline[time]['vespene'][i][0]
+      y = timeline[time]['vespene'][i][1]
+
+      x = x*offsetX
+      y = actual_height - y*offsetY
+
+      unit_size = UNIT_SIZES['vespene']*scaleCoeff
+
+      ctx.strokeStyle = 'green'
+      ctx.strokeRect(x*scaleCoeff-unit_size/2,y*scaleCoeff-unit_size/2,unit_size,unit_size)
+    }
+  }
+
+  var drawXelnagas = function(time) {
+    for(var i in timeline[time]['xelnagas']) {
+      x = timeline[time]['xelnagas'][i][0]
+      y = timeline[time]['xelnagas'][i][1]
+
+      x = x*offsetX
+      y = actual_height - y*offsetY
+
+      unit_size = UNIT_SIZES['xelnaga']*scaleCoeff
+      ctx.fillStyle = 'brown'
+      ctx.fillRect(x*scaleCoeff-unit_size/2,y*scaleCoeff-unit_size/2, unit_size, unit_size)
+    }
+  }
+
+  var drawArmy = function(time) {
+    for(var i in timeline[time]['army']) {
+      pid = i
+
+      var color = 'blue'
+      if (pid == 1){ color = 'red' }
+      player_army = timeline[time]['army'][pid]
+      for(var k in player_army) {
+        x = player_army[k][0]
+        y = player_army[k][1]
+
+        x = x*offsetX
+        y = actual_height - y*offsetY
+
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        unit_size = UNIT_SIZES['army']*scaleCoeff
+        ctx.arc(x*scaleCoeff,y*scaleCoeff, unit_size/2, 0, Math.PI*2, true);
+        ctx.stroke();
+      }
+    }
+  }
+
+  var drawWorkers = function(time) {
+    for(var i in timeline[time]['workers']) {
+      pid = i
+      var color = 'blue'
+      if (pid == 1){ color = 'red' }
+      player_workers = timeline[time]['workers'][pid]
+      for(var k in player_workers) {
+        x = player_workers[k][0]
+        y = player_workers[k][1]
+
+        x = x*offsetX
+        y = actual_height - y*offsetY
+
+        unit_size = UNIT_SIZES['worker']*scaleCoeff
+        ctx.strokeStyle = color;
+        ctx.strokeRect(x*scaleCoeff - unit_size/2, y*scaleCoeff - unit_size/2, unit_size, unit_size)
+      }
+    }
+  }
+
+  var drawBuildings = function(time) {
+    for(var i in timeline[time]['buildings']) {
+      pid = i
+      player_workers = timeline[time]['buildings'][pid]
+      for(var k in player_workers) {
+        x = player_workers[k][0]
+        y = player_workers[k][1]
+
+        x = x*offsetX
+        y = actual_height - y*offsetY
+
+        // ctx.fillStyle = 'red'
+        // ctx.fillRect(x*scaleCoeff - workerSize/2, y*scaleCoeff - workerSize/2, workerSize, workerSize)
+        unit_size = UNIT_SIZES['building']*scaleCoeff
+        ctx.strokeStyle = "black";
+        ctx.strokeRect(x*scaleCoeff - unit_size/2, y*scaleCoeff - unit_size/2, unit_size, unit_size)
+      }
+    }
+  }
+
+  function drawAxisCoordinates(){
+    var xstep = cvs.width/10;
+    for(var x=0; x < cvs.width; x+=xstep) {
+      ctx.fillStyle = "black";
+      ctx.font = "12px serif";
+      ctx.fillText("" + parseInt(x/scaleCoeff), x, 10);
+      ctx.moveTo(x,0);
+      ctx.lineTo(x, cvs.height);
+    }
+    var ystep = cvs.height/10;
+    for(var y=0; y < cvs.height; y+=ystep) {
+      ctx.font = "12px serif";
+      ctx.fillStyle = "black";
+      ctx.fillText("" + parseInt((cvs.height-y)/scaleCoeff), 10, y);
+      ctx.moveTo(0, y);
+      ctx.lineTo(cvs.width, y);
+    }
+    ctx.strokeStyle = "black";
+    ctx.fillStyle = "black";
+    ctx.stroke();
+  }
+
+  var i = 0;
+  var timelineKeys = Object.keys(timeline)
+  var timelineValues = Object.values(timeline)
+  var maxSteps = timelineKeys.length
+  var lastFrame = Object.keys(timeline)[maxSteps - 1]
+
+  // var drawReplay = function(is_zoom = false) {
+  //   real_time = parseInt(timelineKeys[this.playerConfig['currentSecond']]/1.4)
+  //   document.getElementById("frameCounter").innerHTML=fmtMSS(real_time);
+  //   ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+  //   // color in the background
+  //   // ctx.fillStyle = "white";
+  //   // ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+  //   // drawaxes();
+
+  //   // // drawAxisCoordinates();
+  //   // drawMinerals(timelineKeys[this.playerConfig['currentSecond']])
+  //   // drawVespene(timelineKeys[this.playerConfig['currentSecond']])
+  //   // drawXelnagas(timelineKeys[this.playerConfig['currentSecond']])
+  //   // drawBuildings(timelineKeys[this.playerConfig['currentSecond']])
+  //   // drawWorkers(timelineKeys[this.playerConfig['currentSecond']])
+  //   // drawArmy(timelineKeys[this.playerConfig['currentSecond']])
+
+  //   frame = timelineKeys[this.playerConfig['currentSecond']]
+  //   drawCommonObjects(frame, 'minerals', this.playerConfig, '#2196f3', true, false)
+  //   drawPlayerObjects(frame, 'buildings', this.playerConfig, 'black', true, false)
+
+  //   if (!is_zoom){
+  //     this.playerConfig['currentSecond']++;
+  //   }
+
+  //   if(playerOn && this.playerConfig['currentSecond'] < maxSteps) { setTimeout(drawReplay, 100/replaySpeed); }
+  //   // if(i < 50) { setTimeout(drawReplay, 100); }
+  // };
+
+  // SCALE AND TRANSFORM
+  // DOWN HERE
+  // FOR CAVAS ELEMENT
+
+  // var lastX=cvs.width/2, lastY=cvs.height/2;
+  var lastX, lastY;
+  var dragStart,dragged;
+
+  // Setup our function to run on various events
+  var mousedown = function (evt) {
+    sc2replayReport.playerConfig['playerOn'] = false
+    // playerOn = false
+    document.body.style.mozUserSelect = document.body.style.webkitUserSelect = document.body.style.userSelect = 'none';
+    lastX = evt.offsetX || (evt.pageX - cvs.offsetLeft);
+    lastY = evt.offsetY || (evt.pageY - cvs.offsetTop);
+
+    dragStart = ctx.transformedPoint(lastX,lastY);
+
+    dragged = false;
+  };
+  var mousemove = function (evt) {
+    lastX = evt.offsetX || (evt.pageX - cvs.offsetLeft);
+    lastY = evt.offsetY || (evt.pageY - cvs.offsetTop);
+    dragged = true;
+    if (dragStart){
+      var pt = ctx.transformedPoint(lastX,lastY);
+      ctx.translate(pt.x-dragStart.x,pt.y-dragStart.y);
+      setTimeout(sc2replayReport.drawReplay(true));
+    }
+  }
+  var mouseup = function (evt) {
+    dragStart = null;
+    if (!dragged) {
+      zoom(evt.shiftKey ? -1 : 1 );
+    }
+  }
+
+  var addEventListenersToElement = function(cvs){
+    cvs.addEventListener('mousedown',function(evt){mousedown(evt)},false);
+    cvs.addEventListener('mouseup',function(evt){mouseup(evt)},false);
+    cvs.addEventListener('mousemove',function(evt){mousemove(evt)},false);
+
+    // cvs.addEventListener('DOMMouseScroll',handleScroll,false);
+    // cvs.addEventListener('mousewheel',handleScroll,false);
+
+    // TRANSLATE CANVAS ON MOBILE
+    cvs.addEventListener("touchstart", function (e) {
+      mousePos = getTouchPos(cvs, e);
+      var touch = e.touches[0];
+      var mouseEvent = new MouseEvent("mousedown", {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+      });
+      cvs.dispatchEvent(mouseEvent);
+    }, false);
+    cvs.addEventListener("touchend", function (e) {
+      var mouseEvent = new MouseEvent("mouseup", {});
+      cvs.dispatchEvent(mouseEvent);
+    }, false);
+    cvs.addEventListener("touchmove", function (e) {
+      var touch = e.touches[0];
+      var mouseEvent = new MouseEvent("mousemove", {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+      });
+      cvs.dispatchEvent(mouseEvent);
+    }, false);
+  }
+
+  // Get the position of a touch relative to the canvas
+  function getTouchPos(canvasDom, touchEvent) {
+    var rect = canvasDom.getBoundingClientRect();
+    return {
+      x: touchEvent.touches[0].clientX - rect.left,
+      y: touchEvent.touches[0].clientY - rect.top
+    };
+  }
+
+
+  var scaleFactor = 1.1;
+  // var lastX=ctx.width/2, lastY=ctx.height/2;
+  var dragStart,dragged;
+  var matrix;
+  var zoom = function(clicks){
+    var pt = ctx.transformedPoint(lastX,lastY);
+
+    ctx.translate(pt.x,pt.y);
+    var factor = Math.pow(scaleFactor,clicks);
+    ctx.scale(factor,factor);
+    ctx.translate(-pt.x,-pt.y);
+  }
+
+  var handleScroll = function(evt){
+    // playerOn = false
+    sc2replayReport.playerConfig['playerOn'] = false
+    var delta = evt.wheelDelta ? evt.wheelDelta/40 : evt.detail ? -evt.detail : 0;
+    if (delta) {
+      zoom(delta);
+    }
+    setTimeout(sc2replayReport.drawReplay(true));
+    return evt.preventDefault() && false;
+  };
+
+  // document.addEventListener("DOMContentLoaded", () => {
+  //   cvs = document.getElementById('replayCanvas')
+  //   console.log(cvs.offsetWidth, cvs.width)
+  //   scaleCoeff = cvs.offsetWidth/cvs.width;
+
+  //   cvs.width = cvs.offsetWidth
+  //   cvs.height = cvs.width/ratio
+
+  //   // TODO: reinit player
+  //   ctx = cvs.getContext('2d');
+  // });
+
+  function trackTransforms(ctx){
+    var svg = document.createElementNS("http://www.w3.org/2000/svg",'svg');
+    var xform = svg.createSVGMatrix();
+    ctx.getTransform = function(){ return xform; };
+
+    var savedTransforms = [];
+    var save = ctx.save;
+    ctx.save = function(){
+      savedTransforms.push(xform.translate(0,0));
+      return save.call(ctx);
+    };
+    var restore = ctx.restore;
+    ctx.restore = function(){
+      xform = savedTransforms.pop();
+      return restore.call(ctx);
+    };
+
+    var scale = ctx.scale;
+    ctx.scale = function(sx,sy){
+      xform = xform.scaleNonUniform(sx,sy);
+      return scale.call(ctx,sx,sy);
+    };
+    var rotate = ctx.rotate;
+    ctx.rotate = function(radians){
+      xform = xform.rotate(radians*180/Math.PI);
+      return rotate.call(ctx,radians);
+    };
+    var translate = ctx.translate;
+    ctx.translate = function(dx,dy){
+      xform = xform.translate(dx,dy);
+      return translate.call(ctx,dx,dy);
+    };
+    var transform = ctx.transform;
+    ctx.transform = function(a,b,c,d,e,f){
+      var m2 = svg.createSVGMatrix();
+      m2.a=a; m2.b=b; m2.c=c; m2.d=d; m2.e=e; m2.f=f;
+      xform = xform.multiply(m2);
+      return transform.call(ctx,a,b,c,d,e,f);
+    };
+    var setTransform = ctx.setTransform;
+    ctx.setTransform = function(a,b,c,d,e,f){
+      xform.a = a;
+      xform.b = b;
+      xform.c = c;
+      xform.d = d;
+      xform.e = e;
+      xform.f = f;
+      return setTransform.call(ctx,a,b,c,d,e,f);
+    };
+    var pt  = svg.createSVGPoint();
+    ctx.transformedPoint = function(x,y){
+      pt.x=x; pt.y=y;
+      return pt.matrixTransform(xform.inverse());
+    }
+  }
+
+  const scales = {
+        x: {
+          ticks: {
+            callback: function(val, index) {
+              label_val = this.getLabelForValue(val)
+              label_val = label_val/1.4
+              return label_val % 30 === 0 ? fmtMSS(label_val) : ''
+            },
+          },
+        },
+      }
+
+  const tooltip = {
+          callbacks: {
+            title: function(context) {
+              title = fmtMSS(parseInt(context[0].label/1.4));
+              return title;
+            }
+          }
+        }
+
+  const chartConfigTemplate = {
+    type: 'line',
+    data: [],
+    options: {
+      elements: {
+          point:{
+              radius: 0
+          }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index',
+      },
+      scales: {
+        x: {
+          ticks: {
+            callback: function(val, index) {
+              label_val = this.getLabelForValue(val)
+              label_val = label_val/1.4
+              return label_val % 30 === 0 ? fmtMSS(label_val) : ''
+              // Hide the label of every 2nd dataset
+              // return index % 2 === 0 ? fmtMSS() : '';
+            },
+          },
+        },
+      },
+      responsive: true,
+      plugins: {
+        tooltip: {
+          callbacks: {
+            title: function(context) {
+              let title = fmtMSS(context[0].label);
+              return title;
+            }
+          }
+        },
+        title: {
+          display: true,
+          text: ''
+        },
+      }
+    }
+  };
+
+  var chartObjects = {
+    'armyChartObj': '',
+    'workersChartObj': '',
+    'mineralsChartObj': '',
+    'workersActiveChartObj': ''
+  }
+
+  const chartsHelper = {
+    'armyChart': {
+      containerId: 'armyChart',
+      title: 'Army supply',
+      dataVarName: 'armyChartData',
+      chartObjName: 'armyChartObj'
+    },
+    'workersChart': {
+      containerId: 'workersChart',
+      title: 'Workers supply',
+      dataVarName: 'workersChartData',
+      chartObjName: 'workersChartObj'
+    },
+    'mineralsChart': {
+      containerId: 'mineralsChart',
+      title: 'Minerals',
+      dataVarName: 'mineralsChartData',
+      chartObjName: 'mineralsChartObj'
+    }
+  }
+
+  var sc2replayReport = new Vue({
+    el: '#app',
+    vuetify: new Vuetify({
+      theme: { dark: true },
+    }),
+
+    mounted() {
+      this.currentFrameData = timeline[0]
+      this.parsed_players = JSON.parse(JSON.stringify(parsed_result['players']));
+      this.battles = JSON.parse(JSON.stringify(battles_source));
+      this.commonstats_items = summary_data;
+      this.p1info = this.parsed_players['1']
+      this.p2info = this.parsed_players['2']
+      this.shortInfo = parsed_result
+      this.initPlayerConfig()
+      this.initPlayer()
+      this.toogleShowScvs()
+      // tmp = document.getElementById('replayCanvas')
+      // scaleCoeff = tmp.offsetWidth/tmp.width;
+      this.playerSlider = this.playerConfig['currentSecond']
+      this.createCharts();
+      this.drawReplay()
+    },
+
+    methods:{
+      initPlayerConfig(){
+        mapInfo = parsed_result['map_details']
+        this.playerConfig['width'] = mapInfo['width']
+        this.playerConfig['height'] = mapInfo['height']
+        this.playerConfig['ratio'] = mapInfo['width']/mapInfo['height'];
+        // this.playerConfig['actual_width'] = mapInfo['actual_width']
+        // this.playerConfig['actual_height'] = mapInfo['actual_height']
+        // this.playerConfig['offsetX'] = mapInfo['actual_width']/mapInfo['width']
+        // this.playerConfig['offsetY'] = mapInfo['actual_height']/mapInfo['height']
+        this.playerConfig['maxSteps'] = maxSteps
+
+        // playerConfig['width'] = mapInfo['width']
+        // playerConfig['height'] = mapInfo['height']
+        // playerConfig['ratio'] = mapInfo['width']/mapInfo['height'];
+        // playerConfig['actual_width'] = mapInfo['actual_width']
+        // playerConfig['actual_height'] = mapInfo['actual_height']
+        // playerConfig['offsetX'] = mapInfo['actual_width']/mapInfo['width']
+        // playerConfig['offsetY'] = mapInfo['actual_height']/mapInfo['height']
+      },
+      initPlayer(){
+        cvs = document.getElementById('replayCanvas')
+        // var scaleCoeff = cvs.offsetWidth/this.playerConfig['width'];
+        this.playerConfig['scaleCoeff'] = cvs.offsetWidth/this.playerConfig['width'];
+        // playerConfig['scaleCoeff'] = scaleCoeff;
+
+        cvs.width = cvs.offsetWidth
+        cvs.height = cvs.width/this.playerConfig['ratio']
+
+        this.playerConfig['offsetX'] = cvs.width/mapInfo['width']
+        this.playerConfig['offsetY'] = cvs.height/mapInfo['height']
+
+        lastX=cvs.width/2
+        lastY=cvs.height/2
+
+        addEventListenersToElement(cvs)
+        ctx = cvs.getContext('2d');
+        trackTransforms(ctx)
+        // zoom(4)
+      },
+      drawReplay(is_zoom = false) {
+        if (this.playerConfig['currentSecond'] >= maxSteps) {
+          this.playerConfig['currentSecond'] = maxSteps - 1
+        }
+
+        this.currentFrameData = timeline[this.playerConfig['currentSecond']]
+        // real_time = parseInt(timelineKeys[this.playerConfig['currentSecond']]/1.4)
+        // real_time = parseInt(timelineKeys[this.playerConfig['currentSecond']])
+        this.playerConfig['realTime'] = fmtMSS(parseInt(this.playerConfig['currentSecond']/1.4))
+        // this.playerConfig['realTime'] = fmtMSS(real_time)
+        // document.getElementById("frameCounter").innerHTML=fmtMSS(real_time);
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+        frame = timelineKeys[this.playerConfig['currentSecond']]
+
+        // function(time, obj_name, config, color, isStroke, isCircle)
+        drawCommonObjects(frame, 'minerals', this.playerConfig, '#2196f3', false, false)
+        drawCommonObjects(frame, 'vespene', this.playerConfig, '#2196f3', false, false)
+        drawCommonObjects(frame, 'xelnagas', this.playerConfig, 'brown', false, false)
+        drawPlayerObjects(frame, 'buildings', this.playerConfig, 'black', false, false)
+        drawPlayerObjects(frame, 'workers', this.playerConfig, 'black', true, true)
+        drawPlayerObjects(frame, 'army', this.playerConfig, 'black', true, true)
+
+        if (!is_zoom){
+          this.playerConfig['currentSecond']++;
+        }
+
+        if(this.playerConfig['playerOn'] && this.playerConfig['currentSecond'] < maxSteps) { setTimeout(this.drawReplay, 500/this.playerConfig['replaySpeed']); }
+      },
+      zoomPlayer(i){
+        zoom(i ? -2 : 2);
+        this.drawReplay(true);
+      },
+      changeReplaySpeed(direction){
+        var oldPlayerState = this.playerConfig['playerOn']
+        this.playerConfig['playerOn'] = false
+        // playerOn = false
+
+        if (direction == 1){
+          this.playerConfig['replaySpeed'] = this.playerConfig['replaySpeed']*2
+        } else {
+          this.playerConfig['replaySpeed'] = this.playerConfig['replaySpeed']/2
+        }
+        // this.playerConfig['replaySpeedCoef'] = this.playerConfig['replaySpeed']
+        this.playerConfig['playerOn'] = oldPlayerState
+        // playerOn = oldPlayerState
+
+        if (this.playerConfig['playerOn']){
+          this.drawReplay();
+        }
+      },
+
+      rewindPlayer(i){
+        var oldPlayerState = this.playerConfig['playerOn']
+        this.playerConfig['playerOn'] = false
+        // playerOn = false
+        this.playerConfig['currentSecond'] = i
+        this.playerConfig['playerOn'] = oldPlayerState
+        // playerOn = oldPlayerState
+        this.drawReplay(true)
+      },
+
+      refreshPlayer(){
+        this.playerConfig['currentSecond'] = 0
+        this.playerConfig['playerOn'] = true
+        this.playerConfig['replaySpeed'] = 1
+        this.initPlayer()
+        // lastX=cvs.width/2
+        // lastY=cvs.height/2
+        this.drawReplay()
+      },
+
+      playPause(){
+        if (this.playerConfig['playerOn']){
+          this.playerConfig['playerOn'] = false
+          // playerOn = false
+        } else {
+          this.playerConfig['playerOn'] = true
+          // playerOn = true
+          this.drawReplay()
+        }
+      },
+
+      createCharts(){
+        for (const [key, value] of Object.entries(chartsHelper)) {
+          cfg = JSON.parse(JSON.stringify(chartConfigTemplate));
+          cfg['data'] = eval(value['dataVarName'])
+          cfg['options']['plugins']['title']['text'] = value['title']
+          cfg['options']['scales'] = scales
+          cfg['options']['plugins']['tooltip'] = tooltip
+
+          if (chartObjects[value['chartObjName']] != ''){
+            chartObjects[value['chartObjName']].destroy();
+          }
+          chartObjects[value['chartObjName']] = new Chart(
+            document.getElementById(value['containerId']),
+            cfg
+          );
+        }
+      },
+      toogleShowScvs() {
+        for (const [player_id, player_data] of Object.entries(parsed_result['players'])) {
+          build_order = parsed_result['players'][player_id]['buildOrder']
+          if (!this.show_scvs){
+             build_order = build_order.filter(function(item){
+              return item.is_worker == false;
+            })
+          }
+          this.parsed_players[player_id]['buildOrder'] = build_order
+        }
+      }
+    },
+    data: () => ({
+      playerConfig: {
+        'playerOn': false,
+        'currentSecond': 0,
+        'replaySpeed': 1,
+        'realTime': '0:00',
+        // 'replaySpeedCoef': 1,
+        'width': 0,
+        'height': 0,
+        // 'actual_width': 0,
+        // 'actual_height': 0,
+        'ratio': 1,
+        'scaleCoeff': 1,
+        'offsetX': 1,
+        'offsetY': 1,
+      },
+      currentFrameData: {},
+      graphs_tab: null,
+      //replaySpeedCoef: 1,
+      parsed_players: {},
+      shortInfo: {
+        'map_details': {
+        }
+      },
+      p1info: {},
+      p2info: {},
+      commonstats_header: ['name', 'avg_minerals_collection_rate', 'avg_gas_resource_collection_rate', 'avg_minerals_unspent', 'avg_gas_unspent', 'minerals_collected', 'gas_collected', 'apm', 'supply_block', 'workers_killed', 'workers_lost', 'workers_produced'],
+      commonstats_items: [],
+      battles: [],
+      bo_headers: [
+        { text: 'Time', value: 'time'},
+        { text: 'Supply', value: 'supply' },
+        { text: 'Name', value: 'name' },
+      ],
+      show_scvs: false,
+      caruselModel: 0,
+    }),
+  })
+</script>

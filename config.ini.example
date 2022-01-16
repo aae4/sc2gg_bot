@@ -1,0 +1,27 @@
+[project]
+debug = True
+sc2pages_path = '/workspace/pages'
+pages_url = 'https://aae4.github.io/pages/sc2'
+project_path = '/workspace/app'
+save_icons_path = '/workspace/pages/resources/sc2/icons'
+icon_path = './resources/sc2/icons'
+store_replays_count = 8
+
+[bot]
+token = your_telegram_token
+
+admins = 1, 2
+developer = 1
+
+[database]
+sqlite = ''
+
+[server]
+host =
+port =
+listen =
+
+[webhook]
+webhook_url =
+pkey_path =
+cert_path =

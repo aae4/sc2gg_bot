@@ -1,0 +1,569 @@
+<head>
+
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+
+  <script>
+    window.onload = function () {
+      document.body.classList.add('loaded_hiding');
+      window.setTimeout(function () {
+        document.body.classList.add('loaded');
+        document.body.classList.remove('loaded_hiding');
+      }, 500);
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+  <meta charset='UTF-8'>
+  <style>
+    /*PRELOADER*/
+
+    .preloader {
+      /*фиксированное позиционирование*/
+      position: fixed;
+      /* координаты положения */
+      left: 0;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      /* фоновый цвет элемента */
+      background: #212121;
+      /* размещаем блок над всеми элементами на странице (это значение должно быть больше, чем у любого другого позиционированного элемента на странице) */
+      z-index: 1001;
+    }
+
+    .preloader__row {
+      position: relative;
+      top: 50%;
+      left: 50%;
+      width: 70px;
+      height: 70px;
+      margin-top: -35px;
+      margin-left: -35px;
+      text-align: center;
+      animation: preloader-rotate 2s infinite linear;
+    }
+
+    .preloader__item {
+      position: absolute;
+      display: inline-block;
+      top: 0;
+      background-color: #3777ed;
+      border-radius: 100%;
+      width: 35px;
+      height: 35px;
+      animation: preloader-bounce 2s infinite ease-in-out;
+    }
+
+    .preloader__item:last-child {
+      top: auto;
+      bottom: 0;
+      animation-delay: -1s;
+    }
+
+    @keyframes preloader-rotate {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes preloader-bounce {
+
+      0%,
+      100% {
+        transform: scale(0);
+      }
+
+      50% {
+        transform: scale(1);
+      }
+    }
+
+    .loaded_hiding .preloader {
+      transition: 0.3s opacity;
+      opacity: 0;
+    }
+
+    .loaded .preloader {
+      display: none;
+    }
+  </style>
+
+  <style>
+    canvas {
+      width: 100%;
+      border: 1px solid;
+    }
+    /* change vuetify timieline divider width*/
+    .v-timeline-item__divider {
+      min-width: 64px;
+    }
+    .v-timeline--dense .v-timeline-item__body {
+      max-width: calc(100% - 64px);
+    }
+    .v-application--is-ltr .v-timeline--dense:not(.v-timeline--reverse):before {
+        left: calc(32px - 1px)
+    }
+
+    /* units llost images expansion panel reduce padding*/
+    .units-lost-expansion .v-expansion-panel-content__wrap {
+      padding: 0 0 16px;
+    }
+    .units-lost-badge{
+      margin: 1px;
+    }
+    .replay-card{
+      background: rgb(2,0,36);
+      /*background: linear-gradient(90deg, rgba(2,0,36,1) 14%, rgba(9,9,121,1) 63%, rgba(0,212,255,1) 100%);*/
+      background: linear-gradient(90deg, rgb(0 0 0) 14%, rgb(42 42 42) 63%, rgb(80 79 86) 100%);
+/*      background-image: url(https://cdn.vuetifyjs.com/images/backgrounds/vbanner.jpg);
+      background-position: center center;*/
+    }
+
+    #replayCanvas{
+      /*background-color: rgba(255, 255, 255, 0.7);*/
+      background-color: #121212;
+    }
+
+    #frameCounter{
+      background: #25364a;
+      /*background: #cadcee;*/
+    }
+
+    .playerAppBar{
+      background: none !important;
+    }
+
+    .playerSlider{
+      padding-left: 10px;
+    }
+
+    .theme--dark.v-data-table tr{
+      color: #fff !important;
+    }
+  </style>
+</head>
+
+<div class="preloader">
+  <div class="preloader__row">
+    <div class="preloader__item"></div>
+    <div class="preloader__item"></div>
+  </div>
+</div>
+
+<div id="app">
+  <v-app>
+    <v-main>
+      <v-container>
+        <v-row>
+          <v-col cols="12">
+            <v-toolbar
+              dark
+              prominent
+              src="https://cdn.vuetifyjs.com/images/backgrounds/vbanner.jpg"
+            >
+              <!-- <v-app-bar-nav-icon></v-app-bar-nav-icon> -->
+
+              <v-toolbar-title>
+                  SC2 replay report generator
+                  <v-subheader>by LioNs_GaTe_</v-subheader>
+              </v-toolbar-title>
+
+              <v-spacer></v-spacer>
+
+<!--               <v-btn icon>
+                <v-icon>mdi-export</v-icon>
+              </v-btn> -->
+            </v-toolbar>
+          </v-col>
+        </v-row>
+
+        <v-row justify="end">
+          <v-col class="col-sm-12 col-md-6 col-lg-6">
+
+            <v-card
+              class="mx-auto"
+              max-width="400"
+            >
+              <v-img
+                class="white--text align-end"
+                height="200px"
+                :src="shortInfo['map_details']['map_url']"
+              >
+                <v-card-title>{{ shortInfo['map_name'] }}</v-card-title>
+              </v-img>
+
+              <v-card-text class="text--primary">
+
+                <div><b>SC2 Version:</b> {{ shortInfo['version'] }}</div>
+                <div><b>Game category: </b> {{ shortInfo['category'] }}</div>
+                <div><b>Game type: </b> {{ shortInfo['game_type'] }}</div>
+                <div><b>Length: </b> {{ shortInfo['length'] }}</div>
+              </v-card-text>
+
+            </v-card>
+          </v-col>
+
+          <v-col class="col-sm-12 col-md-6 col-lg-6">
+            <v-col class="col-sm-12 col-md-12 col-lg-12"
+                    v-for="(player, i) in parsed_players">
+              <v-card
+                class="mx-auto"
+                max-width="344"
+                outlined
+              >
+                <v-list-item three-line>
+                  <v-list-item-content>
+                    <div class="text-overline mb-4">
+                      <a :href="player['url']"> profile </a>
+                    </div>
+                    <v-list-item-title class="text-h5 mb-1">
+                      {{ player['name'] }}
+                    </v-list-item-title>
+                    <v-list-item-subtitle
+                      :class="player['is_winner'] ? 'green--text accent-1' : ''"
+                    >
+                      result: {{ player['result'] }}
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+
+                  <v-list-item-avatar
+                    tile
+                    size="80"
+                  >
+                    <img
+                      alt="user"
+                      :src="player['play_race_url']"
+                    >
+                  </v-list-item-avatar>
+                </v-list-item>
+              </v-card>
+            </v-col>
+<!--             <v-col class="col-sm-12 col-md-12 col-lg-12">
+              <v-card
+                class="mx-auto"
+                max-width="344"
+                outlined
+              >
+                <v-list-item three-line>
+                  <v-list-item-content>
+                    <div class="text-overline mb-4">
+                      <a :href="p2info['url']"> profile </a>
+                    </div>
+                    <v-list-item-title class="text-h5 mb-1">
+                      {{ p2info['name'] }}
+                    </v-list-item-title>
+                    <v-list-item-subtitle :class="p2info['is_winner'] ? 'green--text accent-1' : ''">
+                      result: {{ p2info['result'] }}
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+
+                  <v-list-item-avatar
+                    tile
+                    size="80"
+                  >
+                    <img
+                      alt="user"
+                      :src="p2info['play_race_url']"
+                    >
+                  </v-list-item-avatar>
+                </v-list-item>
+              </v-card>
+            </v-col> -->
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col>
+            <span class="text-h5" >Build orders</span>
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col v-for="(player, i) in parsed_players"
+            class="col-sm-12 col-md-6 col-lg-6">
+            <v-data-table
+              :headers="bo_headers"
+              :items="player['buildOrder']"
+              class="elevation-1"
+              :disable-sort="true"
+              :disable-filtering="true"
+              :footer-props="{
+                itemsPerPageText: ''
+              }"
+              mobile-breakpoint="0"
+            >
+              <template v-slot:top>
+                <v-toolbar flat>
+                  <v-toolbar-title :class="i==1 ? 'red--text accent-1' : 'blue--text accent-1'">{{ player['name'] }}</v-toolbar-title>
+                  <v-spacer></v-spacer>
+                  <v-switch
+                    label="Show workers"
+                    class="pa-3"
+                    v-model="show_scvs"
+                    @change="toogleShowScvs"
+                  ></v-switch>
+                </v-toolbar>
+              </template>
+            </v-data-table>
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col cols="12">
+            <span class="text-h5" >Battles report(units lost)</span>
+            <v-timeline
+              align-top
+              dense
+            >
+              <v-timeline-item
+                v-for="battle, battle_index in battles"
+                :key="battle_index"
+                small>
+                  <v-expansion-panels>
+                    <v-expansion-panel
+                      key="i"
+                      class="units-lost-expansion"
+                    >
+                      <v-expansion-panel-header>
+                        {{ battle['start_time'] }} - {{ battle['end_time'] }}
+                      </v-expansion-panel-header>
+                      <v-expansion-panel-content>
+                        <div
+                        v-for="losses, player_name in battle['units_lost']">
+                        <v-subheader>{{ player_name }}</v-subheader>
+                          <v-list-item class="d-flex flex-wrap">
+                            <v-badge
+                              v-for="(img, i) in losses"
+                              overlap
+                              left
+                              class="units-lost-badge"
+                              color="blue"
+                              :content="img[0]"
+                            >
+                              <v-img
+                                class="elevation-6"
+                                alt=""
+                                max-width='50px'
+                                max-height='50px'
+                                :src="img[1]"
+                              >
+                              </v-img>
+                            </v-badge>
+                          </v-list-item>
+                        </div>
+                      </v-expansion-panel-content>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
+              </v-timeline-item>
+            </v-timeline>
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col>
+            <span class="text-h5" >Stats & Graphs</span>
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col>
+
+            <v-card>
+              <v-tabs
+                color="blue darken-1 accent-4"
+                v-model="graphs_tab"
+                right
+              >
+                <v-tab v-if="shortInfo['is_zephir']" key="tab1">Stats</v-tab>
+                <v-tab key="tab2">Army</v-tab>
+                <v-tab key="tab3">Workers</v-tab>
+                <v-tab key="tab4">MineralsRate</v-tab>
+                <!-- <v-tab>WorkersActive</v-tab> -->
+
+                <v-tab-item v-if="shortInfo['is_zephir']" :eager="true" key="tab1">
+                  <v-simple-table>
+                    <template v-slot:default>
+                      <thead>
+                        <tr>
+                          <th
+                            v-for="header in commonstats_header"
+                            :key="header"
+                          >
+                          {{ header }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="item in commonstats_items"
+                          :key="item.name"
+                        >
+                          <td>{{ item.name }}</td>
+                          <td>{{ item.avg_minerals_collection_rate }}</td>
+                          <td>{{ item.avg_gas_resource_collection_rate }}</td>
+                          <td>{{ item.avg_minerals_unspent }}</td>
+                          <td>{{ item.avg_gas_unspent }}</td>
+                          <td>{{ item.minerals_collected }}</td>
+                          <td>{{ item.gas_collected }}</td>
+                          <td>{{ item.apm }}</td>
+                          <td>{{ item.supply_block }}</td>
+                          <td>{{ item.workers_killed }}</td>
+                          <td>{{ item.workers_lost }}</td>
+                          <td>{{ item.workers_produced }}</td>
+                        </tr>
+                      </tbody>
+                    </template>
+                  </v-simple-table>
+                </v-tab-item>
+
+                <v-tab-item :eager="true"  key="tab2">
+                  <div>
+                    <canvas id="armyChart"></canvas>
+                  </div>
+                </v-tab-item>
+
+                <v-tab-item :eager="true"  key="tab3">
+                  <div>
+                    <canvas id="workersChart"></canvas>
+                  </div>
+                </v-tab-item>
+
+                <v-tab-item :eager="true" key="tab4">
+                  <div>
+                    <canvas id="mineralsChart"></canvas>
+                  </div>
+                </v-tab-item>
+
+              </v-tabs>
+            </v-card>
+
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col>
+            <span class="text-h5" >Simple replay viewer</span>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <v-card
+              class="overflow-hidden mx-auto replay-card"
+              max-width='500'
+            >
+
+              <v-app-bar d-flex class="playerAppBar">
+                <v-btn-toggle
+                  dense
+                  background-color="primary"
+                  class="mr-auto"
+                  multiple
+                >
+                  <v-btn @click=changeReplaySpeed(-1)>
+                    <span v-if="playerConfig['replaySpeed'] < 1">x{{ playerConfig['replaySpeed'] }}</span>
+                    <v-icon>mdi-skip-backward</v-icon>
+                  </v-btn>
+                  <v-btn @click=playPause>
+                    <v-icon v-if="playerConfig['playerOn']">mdi-pause</v-icon>
+                    <v-icon v-else>mdi-play-circle</v-icon>
+                  </v-btn>
+
+                  <v-btn @click=changeReplaySpeed(1)>
+                    <v-icon>mdi-skip-forward</v-icon>
+                    <span v-if="playerConfig['replaySpeed'] > 1">x{{ playerConfig['replaySpeed'] }}</span>
+                  </v-btn>
+                  <v-btn @click=refreshPlayer>
+                    <v-icon>mdi-refresh</v-icon>
+                  </v-btn>
+                  <v-btn @click=zoomPlayer(false)>
+                    <v-icon>
+                      mdi-magnify-plus
+                    </v-icon>
+                  </v-btn>
+                  <v-btn @click=zoomPlayer(true)>
+                    <v-icon>
+                      mdi-magnify-minus
+                    </v-icon>
+                  </v-btn>
+                </v-btn-toggle>
+              </v-app-bar>
+
+              <v-slider
+                class="playerSlider"
+                color="green"
+                thumb-color="blue"
+                v-model="playerConfig['currentSecond']"
+                @change="rewindPlayer($event)"
+                :thumb-size="24"
+                inverse-label
+                min="0"
+                :max="playerConfig['maxSteps']"
+              >
+                <template v-slot:thumb-label="item">
+                  {{ playerConfig['realTime'] }}
+                </template>
+                <template v-slot:append>
+                  <v-chip id="frameCounter" class="ma-2" label>
+                    {{ playerConfig['realTime'] }}
+                  </v-chip>
+                </template>
+              </v-slider>
+
+              <div class="d-flex" v-for="(player, pid) in parsed_players">
+                <v-list-item class="d-flex flex-wrap">
+                  <span :class="'mr-auto ' + (pid==1 ? 'red--text accent-1' : 'blue--text accent-1')"> {{ player['name'] }} </span>
+                  <v-badge
+                    overlap
+                    left
+                    class="units-lost-badge"
+                    color="#25364a"
+                    :content="'' + Object.keys(currentFrameData['workers'][pid]).length"
+                  >
+                    <v-icon
+                      color="grey lighten-1"
+                      large
+                    >
+                      mdi-account
+                    </v-icon>
+                  </v-badge>
+                  <v-badge
+                    overlap
+                    left
+                    class="units-lost-badge"
+                    color="#25364a"
+                    :content="'' + Object.keys(currentFrameData['army'][pid]).length"
+                  >
+                    <v-icon
+                      color="grey lighten-1"
+                      large
+                    >
+                      mdi-sword
+                    </v-icon>
+                  </v-badge>
+                </v-list-item>
+              </div>
+
+              <v-card-text>
+                <canvas id="replayCanvas"></canvas>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+
+      </v-container>
+    </v-main>
+  </v-app>
+</div>
