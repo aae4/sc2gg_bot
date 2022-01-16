@@ -1,6 +1,6 @@
 from telegram.ext import Updater
 import logging
-import settings
+from bot.scripts import settings
 
 from bot.handlers import (
   start_handler,

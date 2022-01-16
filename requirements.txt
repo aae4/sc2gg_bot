@@ -5,3 +5,4 @@ gitpython
 zephyrus_sc2_parser
 spawningtool
 numpy
+pandas
