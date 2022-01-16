@@ -1,8 +1,9 @@
 from configparser import ConfigParser
+import os
 
 # parse config
 config = ConfigParser()
-config.read('../../config.ini')
+config.read(os.path.join(os.path.dirname(__file__), '../../config.ini'))
 
 # project section
 DEBUG = config.get('project', 'debug')
