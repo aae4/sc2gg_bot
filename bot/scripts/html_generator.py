@@ -93,11 +93,12 @@ class Exporter:
     self.sc2replay = sc2reader.load_replay(path)
     self.init_players()
     self.parsed_result = spawningtool.parser.parse_replay(path, None, None, True)
-    self.is_zephir = True
-    try:
-      self.zreplay = parse_replay(path)
-    except Exception as e:
-      self.is_zephir = False
+    self.is_zephir = False
+    # self.is_zephir = True
+    # try:
+    #   self.zreplay = parse_replay(path)
+    # except Exception as e:
+    #   self.is_zephir = False
 
     self.base_data = self.get_base_data()
     self.units_for_game_state = self.sc2replay.objects.values()
@@ -130,14 +131,14 @@ class Exporter:
     replay_name = self.generateReplayName();
 
     # html_file = open(f"{PROJECT_PATH}/{replay_name}.html", 'w')
-    html_file = open(f"{SC2PAGES_PATH}/{replay_name}.html", 'w')
+    html_file = open(f"{SC2PAGES_PATH}/sc2/{replay_name}.html", 'w')
     html_file.write(res)
 
     return f'{replay_name}.html'
 
   def run(self):
     try:
-      if not self.is_valid_replay(): return
+      if not self.is_valid_replay(): return {'status': False, 'message': 'Invalid replay. Cant parse.', 'filename': filename, 'url': f'{PAGES_URL}/{filename}'}
 
       filename = self.generateHtml()
       self.export_to_git_pages()
@@ -145,6 +146,7 @@ class Exporter:
       self.result = {'status': True, 'message': 'Report successfully generated', 'filename': filename, 'url': f'{PAGES_URL}/{filename}'}
       return self.result
     except Exception as e:
+      print(e)
       self.result = {'status': False, 'message': 'Error', 'url': ''}
       return self.result
 

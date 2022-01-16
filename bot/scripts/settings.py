@@ -19,7 +19,7 @@ PAGES_URL = config.get('project', 'pages_url')
 PROJECT_PATH = config.get('project', 'project_path')
 SAVE_ICONS_PATH = config.get('project', 'save_icons_path')
 ICON_PATH = config.get('project', 'icon_path')
-STORE_REPLAYS_COUNT = config.get('project', 'store_replays_count')
+STORE_REPLAYS_COUNT = config.getint('project', 'store_replays_count')
 
 # # database section
 # SQLITE_PATH = config.get('database', 'sqlite')
