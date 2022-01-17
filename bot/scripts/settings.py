@@ -14,11 +14,13 @@ ADMINS = tuple(map(int, config.get('bot', 'admins').split(',')))
 DEVELOPER = config.getint('bot', 'developer')
 
 
-SC2PAGES_PATH = config.get('project', 'sc2pages_path')
-PAGES_URL = config.get('project', 'pages_url')
+UPLOADED_REPORT_URL = config.get('project', 'uploaded_report_url')
 PROJECT_PATH = config.get('project', 'project_path')
-SAVE_ICONS_PATH = config.get('project', 'save_icons_path')
-ICON_PATH = config.get('project', 'icon_path')
+ICONS_PATH = config.get('project', 'icons_path')
+SRC_URL_PATH = config.get('project', 'src_url_path')
+PAGES_GIT_PATH = config.get('project', 'pages_git_path')
+HTML_STORE_PATH = config.get('project', 'html_store_path')
+REPLAY_STORE_PATH = config.get('project', 'replay_store_path')
 STORE_REPLAYS_COUNT = config.getint('project', 'store_replays_count')
 
 # # database section

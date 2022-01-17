@@ -1,10 +1,13 @@
 [project]
-debug = True
-sc2pages_path = '/workspace/pages'
-pages_url = 'https://aae4.github.io/pages/sc2'
-project_path = '/workspace/app'
-save_icons_path = '/workspace/pages/resources/sc2/icons'
-icon_path = './resources/sc2/icons'
+debug = False
+
+uploaded_report_url = https://aae4.github.io/pages/sc2
+project_path = /workspace/app
+save_icons_path = /workspace/pages/resources/sc2/icons
+src_url_path = ../resources/sc2/icons
+pages_git_path = /workspace/pages
+html_store_path = /Users/abazov/workspace/unknown/sc2/sc2pages/sc2
+replay_store_path = /Users/abazov/workspace/unknown/sc2/sc2gg_bot/files
 store_replays_count = 8
 
 [bot]

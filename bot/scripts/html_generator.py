@@ -20,25 +20,6 @@ from .settings import *
 # ruby hash for maps and images
 # {:"16-Bit SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/cd/16-Bit_SC2_Map1.jpg", :"2000 Atmospheres SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/6a/2000_Atmospheres_SC2_Map1.jpg", :"AbandonedCamp SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/3c/AbandonedCamp_SC2_Map1.jpg", :"AbandonedParish SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/5f/AbandonedParish_SC2_Map1.jpg", :"Abiogenesis SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/9c/Abiogenesis_SC2_Map1.jpg", :"Abyss SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/a/a9/Abyss_SC2_Map1.jpg", :"Abyssal Reef SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/30/Abyssal_Reef_SC2_Map1.jpg", :"AcidPlant SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/b4/AcidPlant_SC2_Map1.jpg", :"Acolyte SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/6d/Acolyte_SC2_Map1.jpg", :"Acropolis SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/b5/Acropolis_SC2_Map1.jpg", :"Aftermath SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/ea/Aftermath_SC2_Map1.jpg", :"AgriaValley SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/76/AgriaValley_SC2_Map1.jpg", :"AiurChef SC2 DevLogo1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/b2/AiurChef_SC2_DevLogo1.jpg", :"AkilonFlats SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/2/2d/AkilonFlats_SC2_Map1.jpg", :"AkilonWastes SC2-HotS Art1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/16/AkilonWastes_SC2-HotS_Art1.jpg", :"AlterzimStronghold SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/79/AlterzimStronghold_SC2_Map1.jpg", :"Anaconda SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/5c/Anaconda_SC2_Map1.jpg", :"AntigaShipyard SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/c6/AntigaShipyard_SC2_Map1.jpg", :"Apotheosis SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/8a/Apotheosis_SC2_Map1.jpg", :"ArakanCitadel SC2 Map1.png"=>"https://static.wikia.nocookie.net/starcraft/images/1/14/ArakanCitadel_SC2_Map1.png", :"ArcticDream SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/c5/ArcticDream_SC2_Map1.jpg", :"ArcticGates SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/2/20/ArcticGates_SC2_Map1.jpg", :"AridPlateau SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/2/28/AridPlateau_SC2_Map1.jpg", :"AridWastes SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/a/a3/AridWastes_SC2_Map1.jpg", :"AscensiontoAiur SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/55/AscensiontoAiur_SC2_Map1.jpg", :"AsperMountain SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/3d/AsperMountain_SC2_Map1.jpg", :"AtlasStation SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/58/AtlasStation_SC2_Map1.jpg", :"AugustineFalls SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/8d/AugustineFalls_SC2_Map1.jpg", :"Automaton SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/9e/Automaton_SC2_Map1.jpg", :"AvalonLabs SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/b2/AvalonLabs_SC2_Map1.jpg", :"Backcountry SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/2/26/Backcountry_SC2_Map1.jpg", :"Backwater SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/cb/Backwater_SC2_Map1.jpg", :"BackwaterComplex SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/7a/BackwaterComplex_SC2_Map1.jpg", :"BackwaterGulch SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/e2/BackwaterGulch_SC2_Map1.jpg", :"BastionoftheConclave SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/f/f6/BastionoftheConclave_SC2_Map1.jpg", :"BattleontheBoardwalk SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/a/aa/BattleontheBoardwalk_SC2_Map1.jpg", :"Beckett Industries SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/97/Beckett_Industries_SC2_Map1.jpg", :"Bel'ShirVestige SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/a/ac/Bel%27ShirVestige_SC2_Map1.jpg", :"Bel'shirWinter SC2 Rend1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/ed/Bel%27shirWinter_SC2_Rend1.jpg", :"Blackburn SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/53/Blackburn_SC2_Map1.jpg", :"Blackfrost Extraction SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/5b/Blackfrost_Extraction_SC2_Map1.jpg", :"BlackSite2E SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/f/f4/BlackSite2E_SC2_Map1.jpg", :"BlisteringSands SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/ed/BlisteringSands_SC2_Map1.jpg", :"BloodBoil SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/83/BloodBoil_SC2_Map1.jpg", :"Blueshift SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/ba/Blueshift_SC2_Map1.jpg", :"BoneTemple SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/76/BoneTemple_SC2_Map1.jpg", :"Bridgehead SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/37/Bridgehead_SC2_Map1.jpg", :"Bulken SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/3a/Bulken_SC2_Map1.jpg", :"BurialGrounds SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/93/BurialGrounds_SC2_Map1.jpg", :"BurningTides SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/f/f9/BurningTides_SC2_Map1.jpg", :"BurriedCaverns SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/33/BurriedCaverns_SC2_Map1.jpg", :"CactusValley SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/e2/CactusValley_SC2_Map1.jpg", :"CalmBeforetheStorm SC2 Rend1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/ed/CalmBeforetheStorm_SC2_Rend1.jpg", :"CanyonofTribulation SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/51/CanyonofTribulation_SC2_Map1.jpg", :"Catallena SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/4/43/Catallena_SC2_Map1.jpg", :"Catalyst SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/97/Catalyst_SC2_Map1.jpg", :"CelestialBastion SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/76/CelestialBastion_SC2_Map1.jpg", :"CentralProtocol SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/b4/CentralProtocol_SC2_Map1.jpg", :"CeruleanFall SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/5a/CeruleanFall_SC2_Map1.jpg", :"CinderFortress SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/f/ff/CinderFortress_SC2_Map1.jpg", :"CloudKingdom SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/0/01/CloudKingdom_SC2_Map1.jpg", :"Coda SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/8d/Coda_SC2_Map1.jpg", :"Colony426 SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/0/0f/Colony426_SC2_Map1.jpg", :"Concord SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/1d/Concord_SC2_Map1.jpg", :"CondemnedRidge SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/d/d2/CondemnedRidge_SC2_Map1.jpg", :"Conduit SC2 LotV Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/cc/Conduit_SC2_LotV_Map1.jpg", :"Crevasse SC2 Rend1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/99/Crevasse_SC2_Rend1.jpg", :"CrookedMaw SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/5b/CrookedMaw_SC2_Map1.jpg", :"Crossfire SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/3e/Crossfire_SC2_Map1.jpg", :"CrypticFortress SC2 LotV Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/9e/CrypticFortress_SC2_LotV_Map1.jpg", :"CrystalPools SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/a/af/CrystalPools_SC2_Map1.jpg", :"CyberForest SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/0/01/CyberForest_SC2_Map1.jpg", :"DarknessSanctuary SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/f/fb/DarknessSanctuary_SC2_Map1.jpg", :"DashandTerminal SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/85/DashandTerminal_SC2_Map1.jpg", :"Daybreak SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/80/Daybreak_SC2_Map1.jpg", :"Daybreak SC2 Rend1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/14/Daybreak_SC2_Rend1.jpg", :"Dead of Night SC2 Map1.png"=>"https://static.wikia.nocookie.net/starcraft/images/0/07/Dead_of_Night_SC2_Map1.png", :"DeadlockRidge SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/0/05/DeadlockRidge_SC2_Map1.jpg", :"Deadwing SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/9d/Deadwing_SC2_Map1.jpg", :"Deathaura SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/32/Deathaura_SC2_Map1.jpg", :"DebrisField SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/98/DebrisField_SC2_Map1.jpg", :"DefendersLanding SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/63/DefendersLanding_SC2_Map1.jpg", :"DeltaQuadrant SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/62/DeltaQuadrant_SC2_Map1.jpg", :"DerelictWatcher SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/89/DerelictWatcher_SC2_Map1.jpg", :"DesertOasis SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/9f/DesertOasis_SC2_Map1.jpg", :"DesertRefuge SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/0/01/DesertRefuge_SC2_Map1.jpg", :"DesolateStronghold SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/cd/DesolateStronghold_SC2_Map1.jpg", :"DigSite SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/d/da/DigSite_SC2_Map1.jpg", :"DirtSide SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/c4/DirtSide_SC2_Map1.jpg", :"DiscoBloodbath SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/77/DiscoBloodbath_SC2_Map1.jpg", :"DiscordIV SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/6a/DiscordIV_SC2_Map1.jpg", :"DistantPlane SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/13/DistantPlane_SC2_Map1.jpg", :"District10 SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/d/df/District10_SC2_Map1.jpg", :"Divergence SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/37/Divergence_SC2_Map1.jpg", :"DoraelusHills SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/a/ab/DoraelusHills_SC2_Map1.jpg", :"DualSight SC2 Rend1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/a/a7/DualSight_SC2_Rend1.jpg", :"DuskTowers SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/36/DuskTowers_SC2_Map1.jpg", :"DustyGorge SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/13/DustyGorge_SC2_Map1.jpg", :"Eastwatch SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/7a/Eastwatch_SC2_Map1.jpg", :"Echo SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/cc/Echo_SC2_Map1.jpg", :"Efflorescence SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/52/Efflorescence_SC2_Map1.jpg", :"Elysium SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/7d/Elysium_SC2_Map1.jpg", :"EmeraldCity SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/36/EmeraldCity_SC2_Map1.jpg", :"EntombedValley SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/81/EntombedValley_SC2_Map1.jpg", :"Ephemeron SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/1b/Ephemeron_SC2_Map1.jpg", :"EternalEmpire SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/74/EternalEmpire_SC2_Map1.jpg", :"EternalScar SC2 Map1.JPG"=>"https://static.wikia.nocookie.net/starcraft/images/1/19/EternalScar_SC2_Map1.JPG", :"EverDream SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/b4/EverDream_SC2_Map1.jpg", :"ExpeditionLost SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/ee/ExpeditionLost_SC2_Map1.jpg", :"Extinction SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/74/Extinction_SC2_Map1.jpg", :"FalloutZone SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/ed/FalloutZone_SC2_Map1.jpg", :"FieldsofShazir SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/86/FieldsofShazir_SC2_Map1.jpg", :"Flashback SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/39/Flashback_SC2_Map1.jpg", :"FloodedCity SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/66/FloodedCity_SC2_Map1.jpg", :"ForbiddenPlanet SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/4/4c/ForbiddenPlanet_SC2_Map1.jpg", :"ForbiddenSanctuary SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/12/ForbiddenSanctuary_SC2_Map1.jpg", :"ForgottenSanctuary SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/b8/ForgottenSanctuary_SC2_Map1.jpg", :"Fortitude SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/2/25/Fortitude_SC2_Map1.jpg", :"FossilQuarry SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/65/FossilQuarry_SC2_Map1.jpg", :"FoxtrotLabs SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/e0/FoxtrotLabs_SC2_Map1.jpg", :"Fracture SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/4/4e/Fracture_SC2_Map1.jpg", :"FracturedGlacier SC2-HotS Art1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/cb/FracturedGlacier_SC2-HotS_Art1.jpg", :"Frontier SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/d/d2/Frontier_SC2_Map1.jpg", :"Frost SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/d/d0/Frost_SC2_Map1.jpg", :"FrozenFields SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/99/FrozenFields_SC2_Map1.jpg", :"FrozenTemple SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/6a/FrozenTemple_SC2_Map1.jpg", :"GalacticProcess SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/3b/GalacticProcess_SC2_Map1.jpg", :"Garden of Shadows SC2 LotV Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/4/4a/Garden_of_Shadows_SC2_LotV_Map1.jpg", :"GeosyncQuarry SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/f/fe/GeosyncQuarry_SC2_Map1.jpg", :"GoldenWall SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/2/29/GoldenWall_SC2_Map1.jpg", :"GraystoneRavine SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/b4/GraystoneRavine_SC2_Map1.jpg", :"GreenAcres SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/f/ff/GreenAcres_SC2_Map1.jpg", :"Gutterhulk SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/56/Gutterhulk_SC2_Map1.jpg", :"GwangalliBeach SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/92/GwangalliBeach_SC2_Map1.jpg", :"HabitationStation SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/36/HabitationStation_SC2_Map1.jpg", :"Halcyon SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/14/Halcyon_SC2_Map1.jpg", :"HavensFall SC2-WoL Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/d/d8/HavensFall_SC2-WoL_Map1.jpg", :"HeavyArtillery SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/94/HeavyArtillery_SC2_Map1.jpg", :"HeavyRain SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/51/HeavyRain_SC2_Map1.jpg", :"HiddenCaves SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/18/HiddenCaves_SC2_Map1.jpg", :"HighGround SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/6a/HighGround_SC2_Map1.jpg", :"HighOrbit SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/73/HighOrbit_SC2_Map1.jpg", :"HillsofPeshkov SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/82/HillsofPeshkov_SC2_Map1.jpg", :"HonorGrounds SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/d/d9/HonorGrounds_SC2_Map1.jpg", :"HowlingPeak SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/57/HowlingPeak_SC2_Map1.jpg", :"HowlingPeaks SC2-HotS Art1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/95/HowlingPeaks_SC2-HotS_Art1.jpg", :"HuntingGround SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/58/HuntingGround_SC2_Map1.jpg", :"Ice and Chrome SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/0/0d/Ice_and_Chrome_SC2_Map1.jpg", :"IceCliffs SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/a/a5/IceCliffs_SC2_Map1.jpg", :"IncinerationZone SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/4/4e/IncinerationZone_SC2_Map1.jpg", :"InfernoPools SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/0/0a/InfernoPools_SC2_Map1.jpg", :"Infestation SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/8c/Infestation_SC2_Map1.jpg", :"Interloper SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/bd/Interloper_SC2_Map1.jpg", :"Invader SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/57/Invader_SC2_Map1.jpg", :"IsleofSlaughter SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/0/07/IsleofSlaughter_SC2_Map1.jpg", :"Jagannatha SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/9c/Jagannatha_SC2_Map1.jpg", :"JungleBasin SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/4/43/JungleBasin_SC2_Map1.jpg", :"JungleDepths SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/4/49/JungleDepths_SC2_Map1.jpg", :"JunkYard SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/d/d7/JunkYard_SC2_Map1.jpg", :"KairosJunction SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/52/KairosJunction_SC2_Map1.jpg", :"KatherineSquare SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/79/KatherineSquare_SC2_Map1.jpg", :"KerrigansWrath SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/a/a4/KerrigansWrath_SC2_Map1.jpg", :"KhaydarinDepths SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/16/KhaydarinDepths_SC2_Map1.jpg", :"KimeranRefuge SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/e8/KimeranRefuge_SC2_Map1.jpg", :"KingsCove SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/92/KingsCove_SC2_Map1.jpg", :"KingSejongStation SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/4/47/KingSejongStation_SC2_Map1.jpg", :"KlontasMire SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/8/88/KlontasMire_SC2_Map1.jpg", :"KorhalCarnageKnockout SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/c7/KorhalCarnageKnockout_SC2_Map1.jpg", :"KorhalCity SC2-HotS Art1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/7/7a/KorhalCity_SC2-HotS_Art1.jpg", :"KorhalCompound SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/12/KorhalCompound_SC2_Map1.jpg", :"KorhalSkyIsland SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/55/KorhalSkyIsland_SC2_Map1.jpg", :"KulasRavine SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/cc/KulasRavine_SC2_Map1.jpg", :"Last Impact SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/50/Last_Impact_SC2_Map1.jpg", :"LastRemnant SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/66/LastRemnant_SC2_Map1.jpg", :"LavaFlow SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/67/LavaFlow_SC2_Map1.jpg", :"Left2Die SC2 DevLogo1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/50/Left2Die_SC2_DevLogo1.jpg", :"Lightshade SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/62/Lightshade_SC2_Map1.jpg", :"LostTemple SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/38/LostTemple_SC2_Map1.jpg", :"LunarColonyV SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/3/32/LunarColonyV_SC2_Map1.jpg", :"MagmaCore SC2 LotV Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/1a/MagmaCore_SC2_LotV_Map1.jpg", :"MagmaMines SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/97/MagmaMines_SC2_Map1.jpg", :"MechDepot SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/e9/MechDepot_SC2_Map1.jpg", :"Megaton SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/b1/Megaton_SC2_Map1.jpg", :"Mementos SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/6/6e/Mementos_SC2_Map1.jpg", :"MerryGoRound SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/e1/MerryGoRound_SC2_Map1.jpg", :"Metalopolis SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/5c/Metalopolis_SC2_Map1.jpg", :"Metropolis SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/d/de/Metropolis_SC2_Map1.jpg", :"Metropolis SC2 Rend1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/e9/Metropolis_SC2_Rend1.jpg", :"MinerEvacuation SC2 Map1.png"=>"https://static.wikia.nocookie.net/starcraft/images/7/79/MinerEvacuation_SC2_Map1.png", :"MoebiusFacilityXX1 SC2 LotV Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/f/f1/MoebiusFacilityXX1_SC2_LotV_Map1.jpg", :"MoltenCrater SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/b/bf/MoltenCrater_SC2_Map1.jpg", :"MoltenTemple SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/2/2b/MoltenTemple_SC2_Map1.jpg", :"MonlythRidge SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/5/51/MonlythRidge_SC2_Map1.jpg", :"Monsoon SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/a/ae/Monsoon_SC2_Map1.jpg", :"MoonlightMadness SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/2/24/MoonlightMadness_SC2_Map1.jpg", :"Multiprocessor SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/9/90/Multiprocessor_SC2_Map1.jpg", :"Nekodrec SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/c/cb/Nekodrec_SC2_Map1.jpg", :"Neo Seoul SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/2/2c/Neo_Seoul_SC2_Map1.jpg", :"NeonVioletSquare SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/e/ea/NeonVioletSquare_SC2_Map1.jpg", :"NeoPlanetS SC2 Map1.jpg"=>"https://static.wikia.nocookie.net/starcraft/images/1/14/NeoPlanetS_SC2_Map1.jpg"}
 
-# SAVE_ICONS_PATH = "/Users/abazov/workspace/unknown/sc2/sc2gg_bot/icons"
-# ICON_PATH = "/Users/abazov/workspace/unknown/sc2/sc2gg_bot/icons"
-
-# SC2PAGES_PATH = '/Users/abazov/workspace/unknown/sc2/sc2pages'
-# PAGES_URL = 'https://aae4.github.io/pages/sc2'
-
-# PROJECT_PATH = '/Users/abazov/workspace/unknown/sc2/sc2gg_bot'
-# SAVE_ICONS_PATH = '/Users/abazov/workspace/unknown/sc2/sc2pages/resources/sc2/icons'
-# ICON_PATH = './resources/sc2/icons'
-# STORE_REPLAYS_COUNT = 8
-
-# SC2PAGES_PATH = settings.SC2PAGES_PATH
-# PAGES_URL = settings.PAGES_URL
-
-# PROJECT_PATH = settings.PROJECT_PATH
-# SAVE_ICONS_PATH = settings.SAVE_ICONS_PATH
-# ICON_PATH = settings.ICON_PATH
-# STORE_REPLAYS_COUNT = settings.STORE_REPLAYS_COUNT
-
 
 RACE_MAP = {
   '저그': 'Zerg',
@@ -61,31 +42,31 @@ RACE_MAP = {
 }
 
 MAP_ICONS = {
-  '2000 атмосфер РВ': f'{ICON_PATH}/maps/2000_Atmospheres.jpg',
-  'Берлинград РВ': f'{ICON_PATH}/maps/Berlingrad.jpg',
-  'Беккетт Индастриз РВ': f'{ICON_PATH}/maps/Beckett_Industries.jpg',
-  'Блэкберн РВ': f'{ICON_PATH}/maps/Blackburn.jpg',
-  'Пытливые умы РВ': f'{ICON_PATH}/maps/Curious_Minds.jpg',
-  'Блестящий пепел РВ': f'{ICON_PATH}/maps/Glittering_Ashes.jpg',
-  'Проводка РВ': f'{ICON_PATH}/maps/Hardwire.jpg',
-  'Гордость Алтариса РВ': f'{ICON_PATH}/maps/Pride_of_Altaris.jpg',
+  '2000 атмосфер РВ': f'{SRC_URL_PATH}/maps/2000_Atmospheres.jpg',
+  'Берлинград РВ': f'{SRC_URL_PATH}/maps/Berlingrad.jpg',
+  'Беккетт Индастриз РВ': f'{SRC_URL_PATH}/maps/Beckett_Industries.jpg',
+  'Блэкберн РВ': f'{SRC_URL_PATH}/maps/Blackburn.jpg',
+  'Пытливые умы РВ': f'{SRC_URL_PATH}/maps/Curious_Minds.jpg',
+  'Блестящий пепел РВ': f'{SRC_URL_PATH}/maps/Glittering_Ashes.jpg',
+  'Проводка РВ': f'{SRC_URL_PATH}/maps/Hardwire.jpg',
+  'Гордость Алтариса РВ': f'{SRC_URL_PATH}/maps/Pride_of_Altaris.jpg',
 
 
-  '2000 Atmospheres LE': f'{ICON_PATH}/maps/2000_Atmospheres.jpg',
-  'Berlingrad LE': f'{ICON_PATH}/maps/Berlingrad.jpg',
-  'Beckett Industries LE': f'{ICON_PATH}/maps/Beckett_Industries.jpg',
-  'Blackburn LE': f'{ICON_PATH}/maps/Blackburn.jpg',
-  'Curious Minds LE': f'{ICON_PATH}/maps/Curious_Minds.jpg',
-  'Glittering Ashes LE': f'{ICON_PATH}/maps/Glittering_Ashes.jpg',
-  'Hardwire LE': f'{ICON_PATH}/maps/Hardwire.jpg',
-  'Pride of Altaris LE': f'{ICON_PATH}/maps/Pride_of_Altaris.jpg'
+  '2000 Atmospheres LE': f'{SRC_URL_PATH}/maps/2000_Atmospheres.jpg',
+  'Berlingrad LE': f'{SRC_URL_PATH}/maps/Berlingrad.jpg',
+  'Beckett Industries LE': f'{SRC_URL_PATH}/maps/Beckett_Industries.jpg',
+  'Blackburn LE': f'{SRC_URL_PATH}/maps/Blackburn.jpg',
+  'Curious Minds LE': f'{SRC_URL_PATH}/maps/Curious_Minds.jpg',
+  'Glittering Ashes LE': f'{SRC_URL_PATH}/maps/Glittering_Ashes.jpg',
+  'Hardwire LE': f'{SRC_URL_PATH}/maps/Hardwire.jpg',
+  'Pride of Altaris LE': f'{SRC_URL_PATH}/maps/Pride_of_Altaris.jpg'
 }
 
 
 RACE_URL = {
-  'Zerg': f'{ICON_PATH}/races/ZergIcon.png',
-  'Protoss': f'{ICON_PATH}/races/ProtossIcon.png',
-  'Terran': f'{ICON_PATH}/races/TerranIcon.png'
+  'Zerg': f'{SRC_URL_PATH}/races/ZergIcon.png',
+  'Protoss': f'{SRC_URL_PATH}/races/ProtossIcon.png',
+  'Terran': f'{SRC_URL_PATH}/races/TerranIcon.png'
 }
 
 class Exporter:
@@ -131,21 +112,20 @@ class Exporter:
 
     replay_name = self.generateReplayName();
 
-    # html_file = open(f"{PROJECT_PATH}/{replay_name}.html", 'w')
-    html_file = open(f"{SC2PAGES_PATH}/sc2/{replay_name}.html", 'w')
+    html_file = open(f"{HTML_STORE_PATH}/{replay_name}.html", 'w')
     html_file.write(res)
 
     return f'{replay_name}.html'
 
   def run(self):
     try:
-      if not self.is_valid_replay(): return {'status': False, 'message': 'Invalid replay. Cant parse.', 'filename': filename, 'url': f'{PAGES_URL}/{filename}'}
+      if not self.is_valid_replay(): return {'status': False, 'message': 'Invalid replay. Cant parse.', 'filename': filename, 'url': ''}
 
       filename = self.generateHtml()
       if not DEBUG:
         self.export_to_git_pages()
         self.cleanup()
-      self.result = {'status': True, 'message': 'Report successfully generated', 'filename': filename, 'url': f'{PAGES_URL}/{filename}'}
+      self.result = {'status': True, 'message': 'Report successfully generated', 'filename': filename, 'url': f'{UPLOADED_REPORT_URL}/{filename}'}
       return self.result
     except Exception as e:
       print(e)
@@ -153,16 +133,14 @@ class Exporter:
       return self.result
 
   def cleanup(self):
-    replays_path = f'{PROJECT_PATH}/files'
-    filenames = [entry.name for entry in sorted(os.scandir(replays_path), key=lambda x: x.stat().st_mtime, reverse=True)]
+    filenames = [entry.name for entry in sorted(os.scandir(REPLAY_STORE_PATH), key=lambda x: x.stat().st_mtime, reverse=True)]
     for filename in filenames[STORE_REPLAYS_COUNT:]:
-      filename_relPath = os.path.join(replays_path, filename)
+      filename_relPath = os.path.join(REPLAY_STORE_PATH, filename)
       os.remove(filename_relPath)
 
-    reports_path = f'{SC2PAGES_PATH}/sc2'
-    filenames = [entry.name for entry in sorted(os.scandir(reports_path), key=lambda x: x.stat().st_mtime, reverse=True)]
+    filenames = [entry.name for entry in sorted(os.scandir(HTML_STORE_PATH), key=lambda x: x.stat().st_mtime, reverse=True)]
     for filename in filenames[STORE_REPLAYS_COUNT:]:
-      filename_relPath = os.path.join(reports_path, filename)
+      filename_relPath = os.path.join(HTML_STORE_PATH, filename)
       os.remove(filename_relPath)
 
   def generate_json(self):
@@ -193,11 +171,11 @@ class Exporter:
     replay.load_map()
     mini_map_name = f"{replay.map.name}_mini.tga"
     # TODO: uncom
-    if not os.path.isfile(f"{SAVE_ICONS_PATH}/maps/{mini_map_name}"):
-      mini_map = open(f"{SAVE_ICONS_PATH}/maps/{mini_map_name}", 'wb')
+    if not os.path.isfile(f"{ICONS_PATH}/maps/{mini_map_name}"):
+      mini_map = open(f"{ICONS_PATH}/maps/{mini_map_name}", 'wb')
       mini_map.write(replay.map.minimap)
       mini_map.close()
-      Image.open(f"{SAVE_ICONS_PATH}/maps/{mini_map_name}").save(f"{SAVE_ICONS_PATH}/maps/{replay.map.name}_mini.png")
+      Image.open(f"{ICONS_PATH}/maps/{mini_map_name}").save(f"{ICONS_PATH}/maps/{replay.map.name}_mini.png")
 
     name = replay.map.name
     width = replay.map.map_info.width
@@ -213,13 +191,13 @@ class Exporter:
       # 'actual_width': actual_width,
       # 'actual_height': actual_height,
       'map_url': MAP_ICONS[self.sc2replay.map_name],
-      'mini_map_url': f'{ICON_PATH}/maps/{replay.map.name}.png'
+      'mini_map_url': f'{SRC_URL_PATH}/maps/{replay.map.name}.png'
     }
 
   def export_to_git_pages(self):
     commit_message = 'upload replay'
     try:
-      repo = Repo(SC2PAGES_PATH)
+      repo = Repo(PAGES_GIT_PATH)
       # repo.git.add(update=True)
       repo.git.add(all=True)
       repo.index.commit(commit_message)
@@ -426,13 +404,12 @@ class Exporter:
     res = ""
     img_name = self.filter_img_name(unit_name)
 
-    path = f"{ICON_PATH}/units"
+    path = f"{SRC_URL_PATH}/units"
 
-    if os.path.isfile(f"{SAVE_ICONS_PATH}/units/{img_name}.jpg"):
+    if os.path.isfile(f"{ICONS_PATH}/units/{img_name}.jpg"):
       res += f"{path}/{img_name}.jpg"
     else:
-      print(path)
-      print(f"{SAVE_ICONS_PATH}/units/{img_name}.jpg")
+      print(f"{ICONS_PATH}/units/{img_name}.jpg")
       res += unit_name
     return res
 
