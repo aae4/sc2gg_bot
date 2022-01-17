@@ -5,6 +5,7 @@ import operator
 from itertools import groupby
 import base64
 import os.path
+import glob
 from git import Repo
 import json
 import numpy as np
@@ -430,12 +431,14 @@ class Exporter:
     if os.path.isfile(f"{SAVE_ICONS_PATH}/units/{img_name}.jpg"):
       res += f"{path}/{img_name}.jpg"
     else:
+      print(path)
+      print(f"{SAVE_ICONS_PATH}/units/{img_name}.jpg")
       res += unit_name
     return res
 
   def filter_img_name(self, name):
     img_name = name.lower().replace(" ", "")
-    keys = ["reactor", "techlab", "widowmine", "supplydepot", "siegetank", "sporecrawler", "spinecrawler"]
+    keys = ["reactor", "techlab", "widowmine", "supplydepot", "siegetank", "sporecrawler", "spinecrawler", "creeptumor"]
     for k in keys:
       if k in img_name:
         img_name = k
