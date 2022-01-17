@@ -2,7 +2,7 @@ from telegram import Update, ParseMode
 from telegram.ext import CallbackContext
 from ..constants import Keyboard
 import time
-from ..scripts.youtube import check_streams_status
+from ..scripts.youtube import check_streams_status, show_current_status
 
 STREAM_MONITOR_ACTIVE = True
 
@@ -15,13 +15,22 @@ def start_command_callback(update: Update, context: CallbackContext):
 
 def stream_monitor_callback(update: Update, context: CallbackContext):
   global STREAM_MONITOR_ACTIVE
-  if len(context.args) > 0:
+
+  if len(context.args) == 0:
+    text = show_current_status()
+
+    context.bot.send_message(
+      chat_id = update.effective_chat.id,
+      text = text,
+      parse_mode = ParseMode.HTML,
+    )
+  else:
     counter = 0
     if context.args[0] == '1':
       context.bot.send_message(
         chat_id = update.effective_chat.id,
-        text = 'Stream Monitor STARTED', parse_mode = ParseMode.HTML,
-        reply_markup = Keyboard.main
+        text = 'Stream Monitor STARTED',
+        parse_mode = ParseMode.HTML
       )
       STREAM_MONITOR_ACTIVE = True
 

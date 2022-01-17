@@ -31,6 +31,17 @@ def is_streaming(ch_type, url):
   else:
     return False
 
+def show_current_status():
+  msgs = []
+  for ch in CHANNELS_LIST:
+    if ch['status'] == True:
+      msgs.append(f"<b>{ch['name']}</b> is <b>ONLINE</b> now: <a href='{ch['url']}'>Watch</a>")
+
+  if len(msgs) == 0:
+    msgs = ["No active streams :("]
+
+  return '\n'.join(msgs)
+
 def check_streams_status():
   global CHANNELS_LIST
 
