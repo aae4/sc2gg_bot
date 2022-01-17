@@ -1,7 +1,7 @@
 case "$1" in
   start)
     echo "Starting sc2gg_bot: "
-    nohup python3.10 -u './main.py' > "${1%.*}.log" 2>&1 < /dev/null &
+    nohup python3 -u './main.py' > "${1%.*}.log" 2>&1 < /dev/null &
     echo "done."
   ;;
   stop)
@@ -19,7 +19,7 @@ esac
 
 mynohup () {
   [[ "$1" = "" ]] && echo "usage: mynohup python_script" && return 0
-  nohup python3.10 -u "$1" > "${1%.*}.log" 2>&1 < /dev/null &
+  nohup python3 -u "$1" > "${1%.*}.log" 2>&1 < /dev/null &
 }
 
 mykill() {
