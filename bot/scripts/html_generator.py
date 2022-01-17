@@ -415,7 +415,7 @@ class Exporter:
 
   def filter_img_name(self, name):
     img_name = name.lower().replace(" ", "")
-    keys = ["reactor", "techlab", "widowmine", "supplydepot", "siegetank", "sporecrawler", "spinecrawler", "creeptumor"]
+    keys = ["lurkerden", "reactor", "techlab", "widowmine", "supplydepot", "siegetank", "sporecrawler", "spinecrawler", "creeptumor", "lurker", "warpprism", "observer", "overseer"]
     for k in keys:
       if k in img_name:
         img_name = k
