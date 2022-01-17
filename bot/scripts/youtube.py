@@ -8,11 +8,11 @@ CHANNELS_LIST = [
   {'type': 'yt', 'name': 'David', 'url': 'https://www.youtube.com/channel/UCVFkJ-isHV0b6j-9QfcQ0xw', 'status': False},
   {'type': 'yt', 'name': 'Fadi', 'url': 'https://www.youtube.com/channel/UCUEgAACAefmjn2SuMvs-xLw', 'status': False},
   {'type': 'yt', 'name': 'David', 'url': 'https://www.youtube.com/channel/UCn2yfnPlaB5wZcPPXpLB-Aw', 'status': False},
-  {'type': 'yt', 'name': 'Chess.com', 'url': 'https://www.youtube.com/channel/UC5kS0l76kC0xOzMPtOmSFGw', 'status': False},
-  {'type': 'tw', 'name': 'Vasiliy', 'url': 'https://www.twitch.tv/augmode', 'status': False},
-  {'type': 'tw', 'name': 'Fadi', 'url': 'https://www.twitch.tv/fuda163', 'status': False},
-  {'type': 'tw', 'name': 'David', 'url': 'https://www.twitch.tv/inshock93', 'status': False},
-  {'type': 'tw', 'name': 'Chess.com', 'url': 'https://www.twitch.tv/chess', 'status': False}
+  # {'type': 'yt', 'name': 'Chess.com', 'url': 'https://www.youtube.com/channel/UC5kS0l76kC0xOzMPtOmSFGw', 'status': False},
+  # {'type': 'tw', 'name': 'Vasiliy', 'url': 'https://www.twitch.tv/augmode', 'status': False},
+  # {'type': 'tw', 'name': 'Fadi', 'url': 'https://www.twitch.tv/fuda163', 'status': False},
+  # {'type': 'tw', 'name': 'David', 'url': 'https://www.twitch.tv/inshock93', 'status': False},
+  # {'type': 'tw', 'name': 'Chess.com', 'url': 'https://www.twitch.tv/chess', 'status': False}
   # {'type': 'tw', 'name': '', 'url': '', 'status': False},
 ]
 
