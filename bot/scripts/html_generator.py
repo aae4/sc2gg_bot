@@ -141,8 +141,9 @@ class Exporter:
       if not self.is_valid_replay(): return {'status': False, 'message': 'Invalid replay. Cant parse.', 'filename': filename, 'url': f'{PAGES_URL}/{filename}'}
 
       filename = self.generateHtml()
-      self.export_to_git_pages()
-      self.cleanup()
+      if not DEBUG:
+        self.export_to_git_pages()
+        self.cleanup()
       self.result = {'status': True, 'message': 'Report successfully generated', 'filename': filename, 'url': f'{PAGES_URL}/{filename}'}
       return self.result
     except Exception as e:
@@ -434,7 +435,7 @@ class Exporter:
 
   def filter_img_name(self, name):
     img_name = name.lower().replace(" ", "")
-    keys = ["reactor", "techlab", "widowmine", "supplydepot", "siegetank"]
+    keys = ["reactor", "techlab", "widowmine", "supplydepot", "siegetank", "sporecrawler", "spinecrawler"]
     for k in keys:
       if k in img_name:
         img_name = k

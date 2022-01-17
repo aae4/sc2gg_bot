@@ -6,7 +6,7 @@ config = ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), '../../config.ini'))
 
 # project section
-DEBUG = config.get('project', 'debug')
+DEBUG = config.getboolean('project', 'debug')
 
 # bot section
 TOKEN = config.get('bot', 'token')
