@@ -11,10 +11,10 @@ require 'pathname'
 Pathname.glob('./*.png').each{|p| p.rename p.sub_ext(".jpg")}
 
 no images:
-/home/pi/workspace/pages/resources/sc2/icons/units/lurkerburrowed.jpg
-/home/pi/workspace/pages/resources/sc2/icons/units/lurkerburrowed.jpg
-/home/pi/workspace/pages/resources/sc2/icons/units/warpprismphasing.jpg
-/home/pi/workspace/pages/resources/sc2/icons/units/lurkerburrowed.jpg
-/home/pi/workspace/pages/resources/sc2/icons/units/observersiegemode.jpg
-/home/pi/workspace/pages/resources/sc2/icons/units/egg.jpg
-/home/pi/workspace/pages/resources/sc2/icons/units/overseersiegemode.jpg
+https://aae4.github.io/pages/sc2/20210426184553_%D0%9E%D0%BA%D1%81%D0%B8%D0%B4%20%D0%A0%D0%92_AgentSmith_vs_Falcon.html
+
+https://starcraft.fandom.com/wiki/Zerg_egg
+
+battle: 12:55 - 13:32
+no img, unkown unit:
+ - egg

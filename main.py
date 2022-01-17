@@ -23,7 +23,7 @@ dispatcher = updater.dispatcher
 def bound_handlers():
   dispatcher.add_handler(start_handler)
   dispatcher.add_handler(stream_monitor_handler)
-  dispatcher.add_handler(message_handler)
+  # dispatcher.add_handler(message_handler)
   dispatcher.add_handler(replay_handler)
 
 def main():
