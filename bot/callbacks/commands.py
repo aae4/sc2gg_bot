@@ -34,15 +34,14 @@ def stream_monitor_callback(update: Update, context: CallbackContext):
           text = '\n'.join(msgs)
           context.bot.send_message(
             chat_id = update.effective_chat.id,
-            text = text, parse_mode = ParseMode.HTML,
-            reply_markup = Keyboard.main
+            text = text, parse_mode = ParseMode.HTML
           )
         time.sleep(10)
     elif context.args[0] == '0':
       STREAM_MONITOR_ACTIVE = False
       context.bot.send_message(
         chat_id = update.effective_chat.id,
-        text = 'Stream Monitor STOPED', parse_mode = ParseMode.HTML,
-        reply_markup = Keyboard.main
+        text = 'Stream Monitor STOPED',
+        parse_mode = ParseMode.HTML
       )
 
