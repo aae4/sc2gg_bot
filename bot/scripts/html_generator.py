@@ -569,7 +569,6 @@ def updatePositionSinceTimeTillTheEnd(timeline, second, uid, new_pos, unit_type)
       if uid in items.keys():
         items[uid] = new_pos
 
-plot_bounds = {}
 def getGameState(
                  all_units = [],
                  replay = None,
@@ -635,17 +634,17 @@ def getGameState(
     mineralfields0 = list(map(lambda x: x[0], mineralfields.values()))
     mineralfields1 = list(map(lambda x: x[1], mineralfields.values()))
 
-    minx = min(mineralfields0) - 20
-    maxx = max(mineralfields0) + 20
-    miny = min(mineralfields1) - 20
-    maxy = max(mineralfields1) + 20
+    # minx = min(mineralfields0) - 20
+    # maxx = max(mineralfields0) + 20
+    # miny = min(mineralfields1) - 20
+    # maxy = max(mineralfields1) + 20
 
-    plot_bounds = {
-      'minx': minx,
-      'maxx': maxx,
-      'miny': miny,
-      'maxy': maxy
-    }
+    # plot_bounds = {
+    #   'minx': minx,
+    #   'maxx': maxx,
+    #   'miny': miny,
+    #   'maxy': maxy
+    # }
     return res
 
 def update_born_locations(units, replay):

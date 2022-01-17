@@ -1,8 +1,0 @@
-# Run a container using the `alpine` image, mount the `/tmp`
-# directory from your host into the `/container/directory`
-# directory in your container, and run the `ls` command to
-# show the contents of that directory.
-docker run \
-    -v /home/pi/workspace/pages:/workspace/pages \
-    alpine \
-    ls /workspace
