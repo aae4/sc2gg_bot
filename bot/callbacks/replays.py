@@ -9,6 +9,12 @@ def replay_handler(update: Update, context: CallbackContext):
     replay = context.bot.getFile(update.message.document)
     replay.download(custom_path=f'./files/{doc.file_name}')
 
+    context.bot.send_message(
+      chat_id = update.effective_chat.id,
+      text = 'Got it, please wait.',
+      parse_mode = ParseMode.HTML,
+    )
+
     path = f'./files/{doc.file_name}'
     exporter = Exporter(path)
     result = exporter.run()

@@ -190,7 +190,7 @@ class Exporter:
       'height': height,
       # 'actual_width': actual_width,
       # 'actual_height': actual_height,
-      'map_url': MAP_ICONS[self.sc2replay.map_name],
+      'map_url': MAP_ICONS.get(self.sc2replay.map_name),
       'mini_map_url': f'{SRC_URL_PATH}/maps/{replay.map.name}.png'
     }
 
