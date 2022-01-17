@@ -32,8 +32,8 @@ def main():
   # configure_database()
 
   # long polling on development
-  if settings.DEBUG:
-    updater.start_polling()
+  # if settings.DEBUG:
+  updater.start_polling()
 
 if __name__ == '__main__':
   main()
