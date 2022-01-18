@@ -18,3 +18,33 @@ https://starcraft.fandom.com/wiki/Zerg_egg
 battle: 12:55 - 13:32
 no img, unkown unit:
  - egg
+
+
+ - xelnaga цвет
+ - если дрон зерга исопльзуется для постройки здания, не показывать его в батл репорте
+ - показывать грейды
+ - показывать потерю в ресурсах в батл репортах
+ - на мии карте крип тюморы обозначать по другому
+
+
+
+Профиль:
+https://us.api.blizzard.com/sc2/metadata/profile/2/2/1824490?locale=en_US&access_token=US7Sxo5RMr7hYzsSH5QlDbiz75qHAyewPp
+
+Инфа по ладеру(мои рейтинги в лигах):
+Ladder Summary
+/sc2/profile/:regionId/:realmId/:profileId/ladder/summary
+https://us.api.blizzard.com/sc2/profile/2/2/1824490/ladder/summary?locale=en_US&access_token=US7Sxo5RMr7hYzsSH5QlDbiz75qHAyewPp
+
+История матчей
+Match History
+/sc2/legacy/profile/:regionId/:realmId/:profileId/matches
+https://us.api.blizzard.com/sc2/legacy/profile/2/2/1824490/matches?access_token=US7Sxo5RMr7hYzsSH5QlDbiz75qHAyewPp
+
+
+Ладдер: (отсюда можно взять ММР)
+Ladder
+/sc2/profile/:regionId/:realmId/:profileId/ladder/:ladderId
+https://us.api.blizzard.com/sc2/profile/2/2/1824490/ladder/243251?locale=en_US&access_token=US7Sxo5RMr7hYzsSH5QlDbiz75qHAyewPp
+
+https://habr.com/ru/post/346606/

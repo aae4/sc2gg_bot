@@ -20,16 +20,21 @@ CHANNELS_LIST = [
   # {'name': '', 'url': '', 'status': False},
 
 def is_streaming(ch_type, url):
-  r = requests.get(url)
   if ch_type == 'yt':
     keyword = 'hqdefault_live.jpg'
+    r1 = requests.get(url)
+    r2 = requests.get(url + '/videos')
+    if keyword in r1.text or keyword in r2.text:
+      return True
+    else:
+      return False
   else:
+    r = requests.get(url)
     keyword = '"isLiveBroadcast":true'
-
-  if keyword in r.text:
-    return True
-  else:
-    return False
+    if keyword in r.text:
+      return True
+    else:
+      return False
 
 def show_current_status():
   msgs = []
@@ -60,7 +65,6 @@ def check_streams_status():
       ch['status'] = status
 
   return msgs
-
 
 # r = requests.get('https://www.twitch.tv/chess')
 # print(r.text)
