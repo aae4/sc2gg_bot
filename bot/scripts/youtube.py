@@ -8,6 +8,7 @@ CHANNELS_LIST = [
   {'type': 'yt', 'name': 'David', 'url': 'https://www.youtube.com/channel/UCVFkJ-isHV0b6j-9QfcQ0xw', 'status': False},
   {'type': 'yt', 'name': 'Fadi', 'url': 'https://www.youtube.com/channel/UCUEgAACAefmjn2SuMvs-xLw', 'status': False},
   {'type': 'yt', 'name': 'David', 'url': 'https://www.youtube.com/channel/UCn2yfnPlaB5wZcPPXpLB-Aw', 'status': False},
+  # {'type': 'yt', 'name': 'AslanTest', 'url': 'https://www.youtube.com/channel/UC-a7iMZ4zIwFVEaaIcVS9tg', 'status': False},
   # {'type': 'yt', 'name': 'Chess.com', 'url': 'https://www.youtube.com/channel/UC5kS0l76kC0xOzMPtOmSFGw', 'status': False},
   # {'type': 'tw', 'name': 'Vasiliy', 'url': 'https://www.twitch.tv/augmode', 'status': False},
   # {'type': 'tw', 'name': 'Fadi', 'url': 'https://www.twitch.tv/fuda163', 'status': False},
@@ -19,7 +20,21 @@ CHANNELS_LIST = [
   # {'name': '', 'url': '', 'status': False},
   # {'name': '', 'url': '', 'status': False},
 
+
 def is_streaming(ch_type, url):
+  if ch_type == 'yt':
+    k1 = '"isLive":true'
+    k2 = '"isLiveBroadcast":true'
+    k3 = 'livePlayerConfig'
+    r = requests.get(url + '/live')
+    if (k1 in r.text or k2 in r.text) and k3 in r.text:
+      return True
+    else:
+      return False
+  else:
+    return False;
+
+def is_streamingOld(ch_type, url):
   if ch_type == 'yt':
     keyword = 'hqdefault_live.jpg'
     r1 = requests.get(url)
@@ -40,7 +55,7 @@ def show_current_status():
   msgs = []
   for ch in CHANNELS_LIST:
     if ch['status'] == True:
-      msgs.append(f"<b>{ch['name']}</b> is <b>ONLINE</b> now: <a href='{ch['url']}'>Watch</a>")
+      msgs.append(f"<b>{ch['name']}</b> is <b>ONLINE</b> now: <a href='{ch['url']}/live'>Watch</a>")
 
   if len(msgs) == 0:
     msgs = ["No active streams :("]
@@ -57,7 +72,7 @@ def check_streams_status():
 
     if not old_status and status:
       # print(f"Channel {ch['name']} is ONLINE now")
-      msgs.append(f"<b>{ch['name']}</b> is <b>ONLINE</b> now: <a href='{ch['url']}'>Go-go!</a>")
+      msgs.append(f"<b>{ch['name']}</b> is <b>ONLINE</b> now: <a href='{ch['url']}/live'>Go-go!</a>")
     elif old_status and not status:
       msgs.append(f"<b>{ch['name']}</b> is <b>OFFLINE</b>. :(")
 
@@ -66,6 +81,27 @@ def check_streams_status():
 
   return msgs
 
+# "isLive": true
+
+# "liveBroadcastDetails":{"isLiveNow":true #!!!!!
+
+# "ownerChannelName": "ThirtyVirus",
+# "liveBroadcastDetails": {
+#   "isLiveNow": true,
+#   "startTimestamp": "2022-01-18T18:59:35+00:00"
+# },
+
+# live1 = 'https://www.youtube.com/c/ThirtyVirus/live'
+# url = 'https://www.youtube.com/c/TheJoves/live'
+# responses = requests.get(url)
+# print(responses.text)
+# for response in responses.history:
+#     print(response.url)
+
+# print('not live')
+# responses = requests.get("https://www.youtube.com/channel/UCvRgzENBHuPzw1q1Tkrlv2g/live")
+# for response in responses.history:
+#     print(response.url)
 # r = requests.get('https://www.twitch.tv/chess')
 # print(r.text)
 # while True:

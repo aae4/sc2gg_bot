@@ -9,7 +9,7 @@ start_handler = CommandHandler(
 stream_monitor_handler = CommandHandler(
   command = 'stream_monitor',
   callback = stream_monitor_callback,
-  filters = Filters.group,
+  filters = Filters.chat_type.groups,
   run_async=True
 )
 
@@ -18,4 +18,4 @@ message_handler = MessageHandler(
   Filters.text & ~Filters.command, message_handler_callback
 )
 
-replay_handler = MessageHandler(Filters.document & Filters.group, replay_handler)
+replay_handler = MessageHandler(Filters.document & Filters.chat_type.groups, replay_handler)

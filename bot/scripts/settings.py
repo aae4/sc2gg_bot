@@ -12,7 +12,7 @@ DEBUG = config.getboolean('project', 'debug')
 TOKEN = config.get('bot', 'token')
 ADMINS = tuple(map(int, config.get('bot', 'admins').split(',')))
 DEVELOPER = config.getint('bot', 'developer')
-
+SC2_CHAT_ID = config.getint('bot', 'sc2chatId')
 
 UPLOADED_REPORT_URL = config.get('project', 'uploaded_report_url')
 PROJECT_PATH = config.get('project', 'project_path')
@@ -21,6 +21,8 @@ SRC_URL_PATH = config.get('project', 'src_url_path')
 PAGES_GIT_PATH = config.get('project', 'pages_git_path')
 HTML_STORE_PATH = config.get('project', 'html_store_path')
 REPLAY_STORE_PATH = config.get('project', 'replay_store_path')
+STORE_REPLAYS_COUNT = config.getint('project', 'store_replays_count')
+
 STORE_REPLAYS_COUNT = config.getint('project', 'store_replays_count')
 
 # # database section
