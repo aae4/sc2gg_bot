@@ -14,7 +14,7 @@ import pandas as pd
 from zephyrus_sc2_parser import parse_replay
 from datetime import datetime
 from PIL import Image
-from .settings import *
+from settings import *
 
 
 # ruby hash for maps and images
@@ -415,7 +415,7 @@ class Exporter:
 
   def filter_img_name(self, name):
     img_name = name.lower().replace(" ", "")
-    keys = ["lurkerden", "reactor", "techlab", "widowmine", "supplydepot", "siegetank", "sporecrawler", "spinecrawler", "creeptumor", "lurker", "warpprism", "observer", "overseer"]
+    keys = ["lurkerden", "reactor", "techlab", "widowmine", "supplydepot", "siegetank", "sporecrawler", "spinecrawler", "creeptumor", "lurker", "warpprism", "observer", "overseer", "liberator"]
     for k in keys:
       if k in img_name:
         img_name = k
@@ -638,6 +638,18 @@ def update_born_locations(units, replay):
       # print(found.id, found.name, found.finished_at, found.location, event.location)
       found.location = event.location
 
+def updat_unit_locations_by_events(units, replay, event_name):
+  events = [event for event in replay.events if 'SelectionEvent' in event.name or 'TargetPointCommandEvent' in event.name]
+  # events  = [event for event in replay.events if event_name in event.name]
+  # for event in unit_born_events:
+  #   unit_id = event.unit.id
+
+  #   found = next((obj for obj in units if obj.id == born_unit_id), None)
+  #   if found is not None:
+  #     found.location = event.location
+  # # TargetPointCommandEvent
+  # # TargetUnitCommandEvent
+
 def getTimeline(current_game, units = []):
   timeline = {}
   for t in range(0, int(frames_to_irl_seconds(current_game.frames)), 1):
@@ -685,6 +697,29 @@ def getTimeline(current_game, units = []):
 # # unit_born  = [event for event in replay.events if 'UnitPositionsEvent' in event.name]
 
 # path = '/Users/abazov/workspace/unknown/sc2/sc2gg_bot/files/Беккетт Индастриз РВ (42).SC2Replay'
+# replay = sc2reader.load_replay(path)
+# # events = [event for event in replay.events if 'SelectionEvent' in event.name or 'TargetPointCommandEvent' in event.name or 'TargetUnitCommandEvent' in event.name]
+# events = [event for event in replay.events if 'UpdateTargetUnitCommandEvent' in event.name]
+
+
+# events = sorted(events, key=lambda x: x.player.pid)
+# from itertools import groupby
+
+# for key, group_items in groupby(events, key=lambda x: x.player.pid):
+#   count = 0
+#   print('Key: %s' % key)
+#   for item in group_items:
+#     if count > 100:
+#       break
+#     print('Item: %s' % item)
+#     count+=1
+
+# for event in events:
+#   if 'TargetPointCommandEvent' in event.name:
+#     print(event.frame, event.name, event.location)
+#   else:
+#     print(event.frame, event.name, event.new_unit_ids)
+
 # # current_game = sc2reader.load_replay(path)
 # exporter = Exporter(path)
 # exporter.generateHtml()
