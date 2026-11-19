@@ -54,12 +54,16 @@
 
   const buildPlayerFiltersEl = document.getElementById("build-player-filters");
   const buildOrderListEl = document.getElementById("build-order-list");
+  const buildScrollNowBtn = document.getElementById("build-scroll-now-btn");
+  const tabBuildEl = document.getElementById("tab-build");
   const battlesListEl = document.getElementById("battles-list");
 
   let currentReplayId = null;
   let currentData = null;
   let buildFilterPid = "all";
   let buildFilterKind = "all";
+  let lastBuildSyncSec = -1;
+  let buildScrollFlashTimer = null;
   let isScrubbing = false;
   let diffMetric = "army_value";
   let battleTooltipHideTimer = null;
@@ -230,6 +234,9 @@
       renderHudCompare(cur, statsByPid);
       updateBattleHud(cur);
       updateBattleNavButtons(cur);
+      if (tabBuildEl && tabBuildEl.classList.contains("active")) {
+        syncBuildTimeline(cur);
+      }
     },
     onPlayStateChange: (playing) => {
       playPauseBtn.textContent = playing ? "⏸" : "▶";
@@ -826,9 +833,103 @@
     });
   }
 
+  const BUILD_COLLAPSE_WINDOW_SEC = 20;
+  const BUILD_SLOT_SEC = 30;
+  const BUILD_KIND_LABELS = {
+    building: "Здание",
+    unit: "Юнит",
+    upgrade: "Апгрейд",
+  };
+
+  function collapseBuildEvents(items, windowSec = BUILD_COLLAPSE_WINDOW_SEC) {
+    const sorted = items
+      .map((item, idx) => ({ item, idx }))
+      .sort((a, b) => (a.item.time_sec - b.item.time_sec) || (a.idx - b.idx));
+
+    const groups = [];
+    const lastByPid = new Map();
+
+    for (const { item } of sorted) {
+      const prev = lastByPid.get(item.pid);
+      if (
+        prev &&
+        prev.name === item.name &&
+        prev.kind === item.kind &&
+        item.time_sec - prev.end_sec <= windowSec
+      ) {
+        prev.count += 1;
+        prev.end_sec = Math.max(prev.end_sec, item.time_sec);
+      } else {
+        const group = {
+          pid: item.pid,
+          name: item.name,
+          kind: item.kind,
+          start_sec: item.time_sec,
+          end_sec: item.time_sec,
+          count: 1,
+        };
+        groups.push(group);
+        lastByPid.set(item.pid, group);
+      }
+    }
+
+    return groups;
+  }
+
+  function groupBuildSlots(groups, players, slotSec = BUILD_SLOT_SEC) {
+    const p1Pid = players[0]?.pid;
+    const p2Pid = players[1]?.pid;
+    const slotsByTime = new Map();
+
+    for (const g of groups) {
+      const slotStart = Math.floor(Math.max(0, g.start_sec) / slotSec) * slotSec;
+      let slot = slotsByTime.get(slotStart);
+      if (!slot) {
+        slot = { slotStart, left: [], right: [] };
+        slotsByTime.set(slotStart, slot);
+      }
+      if (g.pid === p1Pid) {
+        slot.left.push(g);
+      } else if (g.pid === p2Pid) {
+        slot.right.push(g);
+      } else {
+        slot.left.push(g);
+      }
+    }
+
+    return Array.from(slotsByTime.values()).sort((a, b) => a.slotStart - b.slotStart);
+  }
+
+  function renderBuildItemHtml(group, color) {
+    const iconHtml =
+      group.kind === "upgrade"
+        ? `<div class="unit-thumb build-upgrade-icon">⚡</div>`
+        : `<img class="unit-thumb" src="${window.resolveUnitIconPath(group.name, iconsBase)}" alt="" onerror="this.style.visibility='hidden'" />`;
+    const countHtml = group.count > 1 ? `<span class="build-count">×${group.count}</span>` : "";
+    const timeText =
+      group.count > 1 && group.end_sec > group.start_sec
+        ? `${formatTime(group.start_sec)}–${formatTime(group.end_sec)}`
+        : formatTime(group.start_sec);
+    const kindLabel = BUILD_KIND_LABELS[group.kind] || group.kind;
+
+    return `
+      <div class="build-item" data-time="${group.start_sec}" data-end-time="${group.end_sec}" style="--player-color:${escapeHtml(color)}">
+        ${iconHtml}
+        <div class="build-info">
+          <div class="build-name">${escapeHtml(group.name)} ${countHtml}</div>
+          <div class="build-meta">${escapeHtml(timeText)} • ${escapeHtml(kindLabel)}</div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderBuildOrder() {
     if (!currentData) return;
-    const playersById = new Map((currentData.players || []).map((p) => [p.pid, p]));
+    const players = currentData.players || [];
+    const playersById = new Map(players.map((p) => [p.pid, p]));
+    const p1 = players[0] || null;
+    const p2 = players[1] || null;
+
     const items = (currentData.build_order || []).filter((item) => {
       if (buildFilterPid !== "all" && String(item.pid) !== buildFilterPid) return false;
       if (buildFilterKind !== "all" && item.kind !== buildFilterKind) return false;
@@ -837,30 +938,50 @@
 
     if (!items.length) {
       buildOrderListEl.innerHTML = `<div class="muted" style="padding:12px;text-align:center;">Нет событий по выбранному фильтру</div>`;
+      lastBuildSyncSec = -1;
       return;
     }
 
-    buildOrderListEl.innerHTML = items
-      .map((item) => {
-        const p = playersById.get(item.pid);
-        const color = p?.color_hex || "#fff";
-        const iconHtml =
-          item.kind === "upgrade"
-            ? `<div class="unit-thumb" style="display:flex;align-items:center;justify-content:center;font-size:14px;">⚡</div>`
-            : `<img class="unit-thumb" src="${window.resolveUnitIconPath(item.name, iconsBase)}" alt="" onerror="this.style.visibility='hidden'" />`;
+    const collapsed = collapseBuildEvents(items);
+    const slots = groupBuildSlots(collapsed, players);
+
+    const p1Dimmed = buildFilterPid !== "all" && p1 && String(p1.pid) !== buildFilterPid;
+    const p2Dimmed = buildFilterPid !== "all" && p2 && String(p2.pid) !== buildFilterPid;
+
+    const headerHtml = `
+      <div class="build-timeline-header">
+        <div class="build-col-head ${p1Dimmed ? "is-dimmed" : ""}">
+          ${p1 ? `<span class="player-dot" style="background:${escapeHtml(p1.color_hex || "#fff")}"></span><span class="build-col-name">${escapeHtml(p1.name)}</span>` : ""}
+        </div>
+        <div class="build-axis-head">Время</div>
+        <div class="build-col-head ${p2Dimmed ? "is-dimmed" : ""}">
+          ${p2 ? `<span class="player-dot" style="background:${escapeHtml(p2.color_hex || "#fff")}"></span><span class="build-col-name">${escapeHtml(p2.name)}</span>` : ""}
+        </div>
+      </div>
+    `;
+
+    const rowsHtml = slots
+      .map((slot) => {
+        const leftHtml = slot.left
+          .map((g) => renderBuildItemHtml(g, playersById.get(g.pid)?.color_hex || "#fff"))
+          .join("");
+        const rightHtml = slot.right
+          .map((g) => renderBuildItemHtml(g, playersById.get(g.pid)?.color_hex || "#fff"))
+          .join("");
         return `
-          <div class="build-item" data-time="${item.time_sec}">
-            <span class="build-time">${formatTime(item.time_sec)}</span>
-            <span class="player-dot" style="background:${escapeHtml(color)}"></span>
-            ${iconHtml}
-            <div class="build-info">
-              <div class="build-name">${escapeHtml(item.name)}</div>
-              <div class="build-kind">${escapeHtml(p?.name || `P${item.pid}`)} • ${escapeHtml(item.kind)}</div>
+          <div class="build-timeline-row" data-slot-time="${slot.slotStart}">
+            <div class="build-col build-col-left">${leftHtml}</div>
+            <div class="build-axis-cell">
+              <span class="build-axis-dot"></span>
+              <span class="build-axis-time">${formatTime(slot.slotStart)}</span>
             </div>
+            <div class="build-col build-col-right">${rightHtml}</div>
           </div>
         `;
       })
       .join("");
+
+    buildOrderListEl.innerHTML = `${headerHtml}<div class="build-timeline-rows">${rowsHtml}</div>`;
 
     buildOrderListEl.querySelectorAll(".build-item").forEach((el) => {
       el.addEventListener("click", () => {
@@ -869,6 +990,64 @@
         player.seek(t);
       });
     });
+
+    syncBuildTimeline(player.currentTime || 0, true);
+  }
+
+  function syncBuildTimeline(curTime, force = false) {
+    if (!buildOrderListEl) return;
+    const sec = Math.floor(Math.max(0, curTime || 0));
+    if (!force && sec === lastBuildSyncSec) return;
+    lastBuildSyncSec = sec;
+
+    const rows = buildOrderListEl.querySelectorAll(".build-timeline-row");
+    let currentRow = null;
+    rows.forEach((row) => {
+      const slotTime = Number(row.dataset.slotTime) || 0;
+      const isPast = slotTime <= sec;
+      row.classList.toggle("is-past", isPast);
+      row.classList.remove("is-current");
+      if (isPast) currentRow = row;
+    });
+    if (currentRow) {
+      currentRow.classList.add("is-current");
+    }
+
+    const items = buildOrderListEl.querySelectorAll(".build-item");
+    items.forEach((el) => {
+      const start = Number(el.dataset.time) || 0;
+      const end = Number(el.dataset.endTime) || start;
+      const isPast = start <= sec;
+      const isCurrent = start <= sec && sec <= Math.max(end, start + 5);
+      el.classList.toggle("is-past", isPast);
+      el.classList.toggle("is-future", !isPast);
+      el.classList.toggle("is-current", isCurrent);
+    });
+  }
+
+  function scrollToCurrentBuildMoment() {
+    if (!buildOrderListEl) return;
+    const sec = Math.floor(Math.max(0, player.currentTime || 0));
+    const rows = Array.from(buildOrderListEl.querySelectorAll(".build-timeline-row"));
+    if (!rows.length) return;
+
+    let target = rows[0];
+    for (const row of rows) {
+      const slotTime = Number(row.dataset.slotTime) || 0;
+      if (slotTime <= sec) {
+        target = row;
+      } else {
+        break;
+      }
+    }
+
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    rows.forEach((r) => r.classList.remove("is-scroll-target"));
+    target.classList.add("is-scroll-target");
+    if (buildScrollFlashTimer) clearTimeout(buildScrollFlashTimer);
+    buildScrollFlashTimer = setTimeout(() => {
+      target.classList.remove("is-scroll-target");
+    }, 1200);
   }
 
   function renderBattles(data) {
@@ -1192,6 +1371,8 @@
     if (tabName === "map") {
       player.resize();
       renderTimelineDiff();
+    } else if (tabName === "build" && currentData) {
+      syncBuildTimeline(player.currentTime || 0, true);
     } else if (tabName === "charts" && currentData) {
       renderCharts(currentData);
     }
@@ -1337,6 +1518,12 @@
       renderBuildOrder();
     });
   });
+
+  if (buildScrollNowBtn) {
+    buildScrollNowBtn.addEventListener("click", () => {
+      scrollToCurrentBuildMoment();
+    });
+  }
 
   manualForm.addEventListener("submit", (e) => {
     e.preventDefault();

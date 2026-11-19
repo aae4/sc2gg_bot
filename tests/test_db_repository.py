@@ -36,3 +36,40 @@ async def test_repository_replays_and_users(tmp_path: Path):
         assert updated is not None
         assert updated.username == "alice_new"
         assert updated.first_name == "Alice M"
+
+
+async def test_repository_list_replays_and_uploads(tmp_path: Path):
+    db_path = tmp_path / "test_list.sqlite"
+    async with DatabaseRepository(db_path) as repo:
+        for idx in range(3):
+            await repo.save_replay(
+                ReplayRecord(
+                    sha256=f"{idx}" * 64,
+                    replay_id=f"rep{idx:09d}",
+                    map_name=f"Map {idx}",
+                    duration_sec=300 + idx * 10,
+                    summary_text=f"Summary {idx}",
+                    match_title=f"P1 (Z) vs P2 (T) #{idx}",
+                )
+            )
+
+        await repo.record_upload("rep000000000", user_id=1, chat_id=1)
+        await repo.record_upload("rep000000001", user_id=1, chat_id=-100)
+        await repo.record_upload("rep000000002", user_id=2, chat_id=-100)
+
+        by_id = await repo.get_replay_by_id("rep000000001")
+        assert by_id is not None
+        assert by_id.match_title == "P1 (Z) vs P2 (T) #1"
+
+        user1_items, user1_total = await repo.list_replays(user_id=1, limit=1, offset=0)
+        assert user1_total == 2
+        assert len(user1_items) == 1
+        assert user1_items[0].replay_id == "rep000000001"
+
+        user1_page2, _ = await repo.list_replays(user_id=1, limit=1, offset=1)
+        assert len(user1_page2) == 1
+        assert user1_page2[0].replay_id == "rep000000000"
+
+        group_items, group_total = await repo.list_replays(chat_id=-100, limit=10, offset=0)
+        assert group_total == 2
+        assert [item.replay_id for item in group_items] == ["rep000000002", "rep000000001"]
