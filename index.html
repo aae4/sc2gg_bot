@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SC2GG Replay Viewer</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <!-- Loading / Error / Empty States -->
+    <section id="state-screen" class="state-screen">
+      <div class="state-card">
+        <div id="state-spinner" class="spinner"></div>
+        <h2 id="state-title">Загрузка реплея...</h2>
+        <p id="state-message" class="muted">Получаем данные матча</p>
+
+        <form id="manual-load-form" class="manual-form hidden">
+          <input
+            id="manual-replay-id"
+            type="text"
+            placeholder="Replay ID (например: 3a7f9c12b4e1)"
+            autocomplete="off"
+          />
+          <button type="submit" class="btn btn-primary">Открыть</button>
+        </form>
+
+        <button id="retry-btn" class="btn btn-secondary hidden">Повторить</button>
+      </div>
+    </section>
+
+    <!-- Main Viewer -->
+    <main id="viewer-main" class="viewer-main hidden">
+      <!-- Match Header -->
+      <header class="match-header">
+        <div class="match-title-row">
+          <div class="map-meta">
+            <h1 id="map-name">Map Name</h1>
+            <span id="match-meta-sub" class="muted">00:00 • v5.0</span>
+          </div>
+          <span id="replay-id-badge" class="badge">#000000</span>
+        </div>
+
+        <div id="players-bar" class="players-bar"></div>
+      </header>
+
+      <!-- Tabs -->
+      <nav class="tabs-nav" role="tablist">
+        <button class="tab-btn active" data-tab="map" role="tab">🗺 Карта</button>
+        <button class="tab-btn" data-tab="build" role="tab">🏗 Билд</button>
+        <button class="tab-btn" data-tab="charts" role="tab">📈 Графики</button>
+        <button class="tab-btn" data-tab="battles" role="tab">⚔️ Битвы</button>
+      </nav>
+
+      <!-- Tab: 2D Map Player -->
+      <section id="tab-map" class="tab-panel active">
+        <div class="canvas-wrapper" id="canvas-wrapper">
+          <canvas id="map-canvas"></canvas>
+
+          <div class="canvas-overlay-top">
+            <div id="hud-time" class="hud-pill">00:00</div>
+            <div id="hud-units-count" class="hud-pill muted">0 юнитов</div>
+          </div>
+
+          <div class="zoom-controls">
+            <button id="zoom-in-btn" class="icon-btn" title="Приблизить">+</button>
+            <button id="zoom-out-btn" class="icon-btn" title="Отдалить">−</button>
+            <button id="zoom-reset-btn" class="icon-btn" title="Сбросить масштаб">⌖</button>
+            <button id="toggle-icons-btn" class="icon-btn active" title="Иконки юнитов">◈</button>
+          </div>
+
+          <div id="unit-tooltip" class="unit-tooltip hidden"></div>
+        </div>
+
+        <!-- Playback Controls -->
+        <div class="controls-bar">
+          <div class="timeline-row">
+            <div class="timeline-track-wrap">
+              <div id="battle-markers" class="battle-markers"></div>
+              <input
+                id="timeline-slider"
+                type="range"
+                min="0"
+                max="100"
+                step="0.25"
+                value="0"
+              />
+            </div>
+          </div>
+
+          <div class="controls-actions">
+            <div class="playback-left">
+              <button id="play-pause-btn" class="btn btn-primary btn-play">▶</button>
+              <span id="time-display" class="time-display">00:00 / 00:00</span>
+            </div>
+
+            <div class="speed-group" role="group" aria-label="Скорость воспроизведения">
+              <button class="speed-btn active" data-speed="1">1x</button>
+              <button class="speed-btn" data-speed="2">2x</button>
+              <button class="speed-btn" data-speed="4">4x</button>
+              <button class="speed-btn" data-speed="8">8x</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Build Order -->
+      <section id="tab-build" class="tab-panel">
+        <div class="filter-bar">
+          <div id="build-player-filters" class="chip-group"></div>
+          <div class="chip-group">
+            <button class="chip active" data-kind="all">Все</button>
+            <button class="chip" data-kind="building">Здания</button>
+            <button class="chip" data-kind="unit">Юниты</button>
+            <button class="chip" data-kind="upgrade">Апгрейды</button>
+          </div>
+        </div>
+        <div id="build-order-list" class="build-list"></div>
+      </section>
+
+      <!-- Tab: Charts -->
+      <section id="tab-charts" class="tab-panel">
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Стоимость армии (ресурсы)</h3>
+            <canvas id="chart-army" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Активные рабочие</h3>
+            <canvas id="chart-workers" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Использованный лимит (Supply)</h3>
+            <canvas id="chart-supply" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Непотраченные ресурсы</h3>
+            <canvas id="chart-unspent" class="chart-canvas"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Battles -->
+      <section id="tab-battles" class="tab-panel">
+        <div id="battles-list" class="battles-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="player.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
