@@ -1,6 +1,8 @@
 import asyncio
 import hashlib
+import math
 import re
+from bisect import bisect_right
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -69,6 +71,55 @@ WORKER_NAMES = {"SCV", "Probe", "Drone"}
 # Morphing unit types that should not count as unit deaths when replaced by a building/cocoon
 ZERG_MORPH_EXCLUSIONS = {"Drone"}
 
+ABILITY_COMMAND_EVENTS = {
+    "TargetPointCommandEvent",
+    "TargetUnitCommandEvent",
+    "BasicCommandEvent",
+}
+
+# Maps raw sc2reader ability names to canonical names for compact storage and UI rendering
+TRACKED_ABILITY_MAP: dict[str, str] = {
+    # Combat abilities
+    "UseStimpack": "Stimpack",
+    "Stimpack": "Stimpack",
+    "StimpackRedirect": "Stimpack",
+    "StimpackMarauderRedirect": "Stimpack",
+    "Stim": "Stimpack",
+    "PsionicStorm": "PsiStorm",
+    "PsiStorm": "PsiStorm",
+    "ForceField": "ForceField",
+    "GuardianShield": "GuardianShield",
+    "EMPRound": "EMP",
+    "EMP": "EMP",
+    "ChannelSnipe": "Snipe",
+    "Snipe": "Snipe",
+    "YamatoGun": "YamatoGun",
+    "Blink": "Blink",
+    "DarkTemplarBlink": "Blink",
+    "PurificationNovaTargeted": "PurificationNova",
+    "PurificationNova": "PurificationNova",
+    "FungalGrowth": "FungalGrowth",
+    "RavagerCorrosiveBile": "CorrosiveBile",
+    "CorrosiveBile": "CorrosiveBile",
+    "QueenTransfusion": "Transfuse",
+    "Transfusion": "Transfuse",
+    "Transfuse": "Transfuse",
+    "BlindingCloud": "BlindingCloud",
+    "ParasiticBomb": "ParasiticBomb",
+    "RavenShredderMissile": "AntiArmorMissile",
+    "AntiArmorMissile": "AntiArmorMissile",
+    "RavenScramblerMissile": "InterferenceMatrix",
+    "InterferenceMatrix": "InterferenceMatrix",
+    "Feedback": "Feedback",
+    "Abduct": "Abduct",
+    # Utility / macro abilities
+    "ScannerSweep": "ScannerSweep",
+    "SpawnLarva": "InjectLarva",
+    "InjectLarva": "InjectLarva",
+    "ChronoBoostEnergyCost": "ChronoBoost",
+    "ChronoBoost": "ChronoBoost",
+}
+
 
 class ReplayParseError(Exception):
     """Base error raised when a replay cannot be parsed."""
@@ -102,6 +153,10 @@ def _frame_to_sec(frame: int) -> int:
     return max(0, int(round(frame / FRAMES_PER_REAL_SEC)))
 
 
+def _frame_to_exact_sec(frame: int) -> float:
+    return round(max(0.0, frame / FRAMES_PER_REAL_SEC), 2)
+
+
 def _extract_minimap_png(replay: sc2reader.resources.Replay) -> bytes | None:
     try:
         replay.load_map()
@@ -122,6 +177,171 @@ def _compute_apm(replay: sc2reader.resources.Replay, duration_sec: int) -> dict[
                 counts[player.pid] += 1
     minutes = duration_sec / 60.0
     return {pid: int(round(cnt / minutes)) for pid, cnt in counts.items()}
+
+
+def _extract_ability_casts(
+    replay: sc2reader.resources.Replay,
+    valid_pids: set[int],
+) -> tuple[dict[int, str], list[list[int | float | None]]]:
+    """Extract deduplicated combat and key macro ability casts from replay.game_events."""
+    ability_name_to_id: dict[str, int] = {}
+    ability_dict: dict[int, str] = {}
+    ability_casts: list[list[int | float | None]] = []
+
+    last_non_target_cast: dict[tuple[int, int], float] = {}
+    recent_target_casts: dict[tuple[int, int], list[tuple[float, float, float]]] = {}
+
+    def get_ability_id(name: str) -> int:
+        if name not in ability_name_to_id:
+            aid = len(ability_name_to_id) + 1
+            ability_name_to_id[name] = aid
+            ability_dict[aid] = name
+        return ability_name_to_id[name]
+
+    for evt in getattr(replay, "game_events", ()):
+        if type(evt).__name__ not in ABILITY_COMMAND_EVENTS:
+            continue
+        player = getattr(evt, "player", None)
+        if not player or player.pid not in valid_pids:
+            continue
+
+        raw_name = getattr(evt, "ability_name", None) or getattr(getattr(evt, "ability", None), "name", None)
+        if not raw_name:
+            continue
+        canonical = TRACKED_ABILITY_MAP.get(raw_name)
+        if not canonical:
+            continue
+
+        time_sec = _frame_to_exact_sec(evt.frame)
+        loc = getattr(evt, "location", None)
+        if loc is None:
+            target_unit = getattr(evt, "target_unit", None)
+            loc = getattr(target_unit, "location", None) if target_unit is not None else None
+
+        if loc is not None and len(loc) >= 2:
+            x: float | None = round(float(loc[0]), 1)
+            y: float | None = round(float(loc[1]), 1)
+        else:
+            x = None
+            y = None
+
+        aid = get_ability_id(canonical)
+        key = (player.pid, aid)
+
+        if x is None or y is None:
+            prev_t = last_non_target_cast.get(key)
+            if prev_t is not None and abs(time_sec - prev_t) < 1.0:
+                continue
+            last_non_target_cast[key] = time_sec
+        else:
+            recent = recent_target_casts.get(key, [])
+            # Keep only recent casts within 1.0s to bound per-key check
+            recent = [(pt, px, py) for pt, px, py in recent if abs(time_sec - pt) <= 1.0]
+            if any(abs(time_sec - pt) < 0.5 and (x - px) ** 2 + (y - py) ** 2 < 2.25 for pt, px, py in recent):
+                recent_target_casts[key] = recent
+                continue
+            recent.append((time_sec, x, y))
+            recent_target_casts[key] = recent
+
+        ability_casts.append([time_sec, player.pid, aid, x, y])
+
+    ability_casts.sort(key=lambda item: float(item[0]))
+    return ability_dict, ability_casts
+
+
+LONG_RANGE_KILLER_NAMES = {
+    "SiegeTankSieged",
+    "Tempest",
+    "Carrier",
+    "BroodLord",
+    "Thor",
+    "LiberatorAG",
+    "LurkerMPBurrowed",
+    "Battlecruiser",
+}
+
+
+def _get_killer_max_tracer_dist(killer_name: str | None) -> float:
+    if killer_name in LONG_RANGE_KILLER_NAMES:
+        return 20.0
+    return 14.0
+
+
+def _build_unit_position_tracks(
+    tracker_events: list,
+) -> dict[int, tuple[list[int], list[tuple[float, float]]]]:
+    """Build per-unit (frames, coords) tracks from tracker_events for accurate killer interpolation."""
+    raw_tracks: dict[int, list[tuple[int, float, float]]] = {}
+
+    for evt in tracker_events:
+        ename = type(evt).__name__
+        frame = int(getattr(evt, "frame", 0) or 0)
+        if ename in {"UnitBornEvent", "UnitInitEvent", "UnitDiedEvent"}:
+            unit = getattr(evt, "unit", None)
+            loc = getattr(evt, "location", None) or (getattr(unit, "location", None) if unit else None)
+            if unit and loc and len(loc) >= 2:
+                raw_tracks.setdefault(unit.id, []).append((frame, float(loc[0]), float(loc[1])))
+        elif ename == "UnitPositionsEvent":
+            units_pos = getattr(evt, "units", None) or {}
+            for unit, loc in units_pos.items():
+                if unit and loc and len(loc) >= 2:
+                    raw_tracks.setdefault(unit.id, []).append((frame, float(loc[0]), float(loc[1])))
+
+    tracks: dict[int, tuple[list[int], list[tuple[float, float]]]] = {}
+    for uid, pts in raw_tracks.items():
+        pts.sort(key=lambda item: item[0])
+        frames = [p[0] for p in pts]
+        coords = [(p[1], p[2]) for p in pts]
+        tracks[uid] = (frames, coords)
+    return tracks
+
+
+def _resolve_killer_pos(
+    tracks: dict[int, tuple[list[int], list[tuple[float, float]]]],
+    killer_uid: int | None,
+    killer_name: str | None,
+    death_frame: int,
+    victim_x: float,
+    victim_y: float,
+) -> tuple[float | None, float | None]:
+    """Interpolate killer position at death_frame and validate it against attack range."""
+    if killer_uid is None or killer_uid not in tracks:
+        return None, None
+
+    frames, coords = tracks[killer_uid]
+    if not frames:
+        return None, None
+
+    max_before_frames = int(5.0 * FRAMES_PER_REAL_SEC)
+    max_after_frames = int(4.0 * FRAMES_PER_REAL_SEC)
+
+    idx = bisect_right(frames, death_frame)
+    has_before = idx > 0 and (death_frame - frames[idx - 1]) <= max_before_frames
+    has_after = idx < len(frames) and (frames[idx] - death_frame) <= max_after_frames
+
+    if has_before and has_after:
+        f0 = frames[idx - 1]
+        f1 = frames[idx]
+        x0, y0 = coords[idx - 1]
+        x1, y1 = coords[idx]
+        if f1 > f0:
+            t = (death_frame - f0) / (f1 - f0)
+            kx = x0 + (x1 - x0) * t
+            ky = y0 + (y1 - y0) * t
+        else:
+            kx, ky = x0, y0
+    elif has_after:
+        kx, ky = coords[idx]
+    elif has_before:
+        kx, ky = coords[idx - 1]
+    else:
+        return None, None
+
+    dist = math.hypot(victim_x - kx, victim_y - ky)
+    if dist <= 0.4 or dist > _get_killer_max_tracer_dist(killer_name):
+        return None, None
+
+    return round(kx, 1), round(ky, 1)
 
 
 def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundle:
@@ -230,9 +450,11 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
     active_units: dict[int, list] = {}
     last_sent_units: dict[int, tuple[int, int, float, float]] = {}
     deaths: list[UnitDeathRecord] = []
+    death_events: list[list[int | float | None]] = []
     build_order: list[BuildOrderItem] = []
 
     # Group tracker events by real second for timeline sampling
+    unit_tracks = _build_unit_position_tracks(replay.tracker_events)
     events_by_sec: dict[int, list] = {}
     for evt in replay.tracker_events:
         sec = _frame_to_sec(evt.frame)
@@ -286,18 +508,22 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
                     continue
                 if _is_ignored_unit(unit.name):
                     continue
+                killer = getattr(evt, "killing_player", None)
                 # Skip Drone death if it was killed by morphing into a building (no killer player)
-                if unit.name in ZERG_MORPH_EXCLUSIONS and getattr(evt, "killing_player", None) is None:
+                if unit.name in ZERG_MORPH_EXCLUSIONS and killer is None:
                     continue
+                k_pid = killer.pid if killer is not None else getattr(evt, "killer_pid", None)
                 if unit.name in WORKER_NAMES:
                     workers_lost[owner.pid] += 1
-                    killer = getattr(evt, "killing_player", None)
-                    k_pid = killer.pid if killer is not None else getattr(evt, "killer_pid", None)
                     if k_pid in workers_killed and k_pid != owner.pid:
                         workers_killed[k_pid] += 1
                 loc = getattr(evt, "location", None) or (state[2], state[3]) if state else getattr(unit, "location", None)
                 if not loc:
                     continue
+                minerals = int(getattr(unit, "minerals", 0) or 0)
+                vespene = int(getattr(unit, "vespene", 0) or 0)
+                dx = round(float(loc[0]), 1)
+                dy = round(float(loc[1]), 1)
                 deaths.append(
                     UnitDeathRecord(
                         time_sec=sec,
@@ -305,10 +531,37 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
                         unit_name=unit.name,
                         x=float(loc[0]),
                         y=float(loc[1]),
-                        minerals=int(getattr(unit, "minerals", 0) or 0),
-                        vespene=int(getattr(unit, "vespene", 0) or 0),
+                        minerals=minerals,
+                        vespene=vespene,
                     )
                 )
+                k_unit = getattr(evt, "killing_unit", None)
+                k_uid = getattr(k_unit, "id", None) if k_unit is not None else None
+                k_name = getattr(k_unit, "name", None) if k_unit is not None else None
+                k_type_id = get_type_id(k_name) if (k_name and not _is_ignored_unit(k_name)) else None
+                valid_k_pid = k_pid if k_pid in army_value else None
+                kx, ky = _resolve_killer_pos(
+                    unit_tracks,
+                    k_uid,
+                    k_name,
+                    int(getattr(evt, "frame", 0) or 0),
+                    float(loc[0]),
+                    float(loc[1]),
+                )
+                death_events.append([
+                    _frame_to_exact_sec(evt.frame),
+                    unit.id,
+                    owner.pid,
+                    get_type_id(unit.name),
+                    dx,
+                    dy,
+                    k_uid,
+                    valid_k_pid,
+                    k_type_id,
+                    minerals + vespene,
+                    kx,
+                    ky,
+                ])
 
             elif ename == "UpgradeCompleteEvent":
                 pid = getattr(evt, "pid", None)
@@ -335,6 +588,7 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
             next_sample_sec += sample_step_sec
 
     battles = detect_battles(deaths)
+    ability_dict, ability_casts = _extract_ability_casts(replay, set(army_value.keys()))
 
     players: list[PlayerInfo] = []
     for p in replay.players:
@@ -397,6 +651,9 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
             unspent_resources=unspent_series,
             supply_used=supply_series,
         ),
+        deaths=death_events,
+        ability_dict=ability_dict,
+        ability_casts=ability_casts,
     )
 
     return ParsedReplayBundle(data=data, minimap_png=minimap_png, hd_map_bytes=hd_map_bytes)

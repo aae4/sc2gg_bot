@@ -145,6 +145,30 @@
     return UNIT_RANGES[slug] || { attack: 0, sight: 9 };
   }
 
+  const ABILITY_STYLES = {
+    PsiStorm: { kind: "aoe", label: "Storm", color: "#38bdf8", fill: "rgba(56, 189, 248, 0.22)", radius: 1.8, duration: 2.8 },
+    EMP: { kind: "aoe", label: "EMP", color: "#60a5fa", fill: "rgba(96, 165, 250, 0.24)", radius: 1.8, duration: 1.6 },
+    FungalGrowth: { kind: "aoe", label: "Fungal", color: "#4ade80", fill: "rgba(74, 222, 128, 0.22)", radius: 2.25, duration: 2.4 },
+    CorrosiveBile: { kind: "aoe", label: "Bile", color: "#a3e635", fill: "rgba(163, 230, 53, 0.24)", radius: 1.1, duration: 1.8 },
+    BlindingCloud: { kind: "aoe", label: "Cloud", color: "#84cc16", fill: "rgba(132, 204, 22, 0.22)", radius: 2.2, duration: 3.0 },
+    ScannerSweep: { kind: "aoe", label: "Scan", color: "#93c5fd", fill: "rgba(147, 197, 253, 0.12)", radius: 7.5, duration: 2.8, dashed: true },
+    ForceField: { kind: "aoe", label: "FF", color: "#22d3ee", fill: "rgba(34, 211, 238, 0.20)", radius: 1.5, duration: 2.6 },
+    GuardianShield: { kind: "aoe", label: "Shield", color: "#67e8f9", fill: "rgba(103, 232, 249, 0.14)", radius: 4.5, duration: 2.8, dashed: true },
+    PurificationNova: { kind: "aoe", label: "Nova", color: "#fb923c", fill: "rgba(251, 146, 60, 0.26)", radius: 1.6, duration: 1.8 },
+    AntiArmorMissile: { kind: "aoe", label: "AAM", color: "#f97316", fill: "rgba(249, 115, 22, 0.22)", radius: 2.5, duration: 2.0 },
+    ParasiticBomb: { kind: "aoe", label: "PBomb", color: "#a855f7", fill: "rgba(168, 85, 247, 0.22)", radius: 2.5, duration: 2.4 },
+    Blink: { kind: "bolt", label: "Blink", color: "#38bdf8", duration: 1.2 },
+    YamatoGun: { kind: "bolt", label: "Yamato", color: "#f97316", duration: 1.5 },
+    Yamato: { kind: "bolt", label: "Yamato", color: "#f97316", duration: 1.5 },
+    Snipe: { kind: "bolt", label: "Snipe", color: "#ef4444", duration: 1.4 },
+    Feedback: { kind: "bolt", label: "Feedback", color: "#c084fc", duration: 1.3 },
+    Transfuse: { kind: "bolt", label: "Transfuse", color: "#4ade80", duration: 1.3 },
+    Abduct: { kind: "bolt", label: "Abduct", color: "#c084fc", duration: 1.4 },
+    InterferenceMatrix: { kind: "bolt", label: "Matrix", color: "#facc15", duration: 1.4 },
+    InjectLarva: { kind: "bolt", label: "Inject", color: "#a855f7", duration: 1.2, subtle: true },
+    ChronoBoost: { kind: "bolt", label: "Chrono", color: "#38bdf8", duration: 1.2, subtle: true },
+  };
+
   function resolveUnitIconPath(unitName, iconsBase) {
     const slug = String(unitName || "")
       .toLowerCase()
@@ -168,6 +192,9 @@
       this.mapMode = "hd"; // "hd" | "tactical"
       this.playersById = new Map();
       this.keyframeStates = new Map(); // frameIdx -> Map<uid, [pid, tid, x, y]>
+      this.deaths = [];
+      this.deathsByUid = new Map();
+      this.abilityCasts = [];
       this.unitIconCache = new Map(); // typeId -> HTMLImageElement | null (failed)
 
       this.currentTime = 0;
@@ -226,6 +253,8 @@
       }
 
       this._buildKeyframeCache();
+      this._buildDeathIndex(replayData.deaths || []);
+      this._buildAbilityIndex(replayData.ability_casts || []);
       this.resetView();
       this.render();
       this.onTimeUpdate(
@@ -294,12 +323,131 @@
       return state;
     }
 
+    _buildDeathIndex(rawDeaths) {
+      const parsed = [];
+      this.deathsByUid.clear();
+      for (const d of rawDeaths) {
+        if (!Array.isArray(d) || d.length < 6) continue;
+        const item = {
+          timeSec: Number(d[0]) || 0,
+          uid: d[1],
+          pid: d[2],
+          typeId: d[3],
+          x: Number(d[4]) || 0,
+          y: Number(d[5]) || 0,
+          killerUid: d[6] ?? null,
+          killerPid: d[7] ?? null,
+          killerTypeId: d[8] ?? null,
+          value: Number(d[9]) || 0,
+          hasExplicitKillerPos: d.length >= 12,
+          killerX: d[10] !== null && d[10] !== undefined ? Number(d[10]) : null,
+          killerY: d[11] !== null && d[11] !== undefined ? Number(d[11]) : null,
+        };
+        parsed.push(item);
+        if (item.uid !== null && item.uid !== undefined) {
+          this.deathsByUid.set(item.uid, item);
+        }
+      }
+      parsed.sort((a, b) => a.timeSec - b.timeSec);
+      this.deaths = parsed;
+    }
+
+    _findInTimeWindow(list, fromSec, toSec) {
+      if (!list.length || toSec < fromSec) return [];
+      let lo = 0;
+      let hi = list.length - 1;
+      let start = list.length;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (list[mid].timeSec >= fromSec) {
+          start = mid;
+          hi = mid - 1;
+        } else {
+          lo = mid + 1;
+        }
+      }
+      const res = [];
+      for (let i = start; i < list.length; i++) {
+        if (list[i].timeSec > toSec) break;
+        res.push(list[i]);
+      }
+      return res;
+    }
+
+    _findDeathsInWindow(fromSec, toSec) {
+      return this._findInTimeWindow(this.deaths, fromSec, toSec);
+    }
+
+    _buildAbilityIndex(rawCasts) {
+      const parsed = [];
+      for (const c of rawCasts) {
+        if (!Array.isArray(c) || c.length < 3) continue;
+        parsed.push({
+          timeSec: Number(c[0]) || 0,
+          pid: c[1],
+          abilityId: c[2],
+          x: c[3] !== null && c[3] !== undefined ? Number(c[3]) : null,
+          y: c[4] !== null && c[4] !== undefined ? Number(c[4]) : null,
+        });
+      }
+      parsed.sort((a, b) => a.timeSec - b.timeSec);
+      this.abilityCasts = parsed;
+    }
+
+    _findAbilitiesInWindow(fromSec, toSec) {
+      return this._findInTimeWindow(this.abilityCasts, fromSec, toSec);
+    }
+
+    _getLayerAlpha(unitName) {
+      const isBuilding = BUILDING_NAMES.has(unitName);
+      const isWorker = WORKER_NAMES.has(unitName);
+      const isNonArmy = NON_ARMY_UNIT_NAMES.has(unitName);
+      if (this.layerFilter === "army") {
+        if (isWorker || isNonArmy) return 0;
+        if (isBuilding) return 0.16;
+      } else if (this.layerFilter === "workers") {
+        if (!isWorker && !isBuilding) return 0;
+        if (isBuilding) return 0.16;
+      } else if (this.layerFilter === "buildings") {
+        if (!isBuilding) return 0;
+      }
+      return 1;
+    }
+
+    _resolveUnitPos(uid, state0, state1, alpha, t0) {
+      const u0 = state0.get(uid);
+      if (u0) {
+        let ux = u0[2];
+        let uy = u0[3];
+        const u1 = state1.get(uid);
+        const death = this.deathsByUid.get(uid);
+        if (u1 && alpha > 0) {
+          ux = ux + (u1[2] - ux) * alpha;
+          uy = uy + (u1[3] - uy) * alpha;
+        } else if (death && !u1 && death.timeSec > t0) {
+          const dAlpha = Math.max(0, Math.min(1, (this.currentTime - t0) / (death.timeSec - t0)));
+          ux = ux + (death.x - ux) * dAlpha;
+          uy = uy + (death.y - uy) * dAlpha;
+        }
+        return { x: ux, y: uy };
+      }
+      const death = this.deathsByUid.get(uid);
+      if (death && Math.abs(this.currentTime - death.timeSec) <= 3) {
+        return { x: death.x, y: death.y };
+      }
+      return null;
+    }
+
     _findFrameBracket(timeSec) {
       const frames = this.data?.frames || [];
-      if (!frames.length) return { idx0: 0, idx1: 0, alpha: 0 };
-      if (timeSec <= frames[0].time_sec) return { idx0: 0, idx1: 0, alpha: 0 };
+      if (!frames.length) return { idx0: 0, idx1: 0, alpha: 0, t0: 0, t1: 0 };
+      if (timeSec <= frames[0].time_sec) {
+        return { idx0: 0, idx1: 0, alpha: 0, t0: frames[0].time_sec, t1: frames[0].time_sec };
+      }
       const last = frames.length - 1;
-      if (timeSec >= frames[last].time_sec) return { idx0: last, idx1: last, alpha: 0 };
+      if (timeSec >= frames[last].time_sec) {
+        return { idx0: last, idx1: last, alpha: 0, t0: frames[last].time_sec, t1: frames[last].time_sec };
+      }
 
       let lo = 0;
       let hi = last;
@@ -313,7 +461,7 @@
       const t0 = frames[idx0].time_sec;
       const t1 = frames[idx1].time_sec;
       const alpha = t1 > t0 ? (timeSec - t0) / (t1 - t0) : 0;
-      return { idx0, idx1, alpha: Math.max(0, Math.min(1, alpha)) };
+      return { idx0, idx1, alpha: Math.max(0, Math.min(1, alpha)), t0, t1 };
     }
 
     _getUnitIcon(typeId) {
@@ -628,7 +776,7 @@
       }
 
       // Interpolate units
-      const { idx0, idx1, alpha } = this._findFrameBracket(this.currentTime);
+      const { idx0, idx1, alpha, t0 } = this._findFrameBracket(this.currentTime);
       const state0 = this._getStateAtFrame(idx0);
       const state1 = idx1 !== idx0 ? this._getStateAtFrame(idx1) : state0;
       const unitDict = this.data.unit_dict || {};
@@ -639,6 +787,11 @@
       let selectedUnit = null;
 
       for (const [uid, u0] of state0.entries()) {
+        const death = this.deathsByUid.get(uid);
+        if (death && this.currentTime >= death.timeSec) {
+          continue;
+        }
+
         const pid = u0[0];
         const typeId = u0[1];
         let ux = u0[2];
@@ -648,6 +801,10 @@
         if (u1 && alpha > 0) {
           ux = ux + (u1[2] - ux) * alpha;
           uy = uy + (u1[3] - uy) * alpha;
+        } else if (death && !u1 && death.timeSec > t0) {
+          const dAlpha = Math.max(0, Math.min(1, (this.currentTime - t0) / (death.timeSec - t0)));
+          ux = ux + (death.x - ux) * dAlpha;
+          uy = uy + (death.y - uy) * dAlpha;
         }
 
         const unitName = unitDict[typeId] || "Unit";
@@ -662,16 +819,8 @@
         else if (isWorker) statsByPid[pid].workers += 1;
         else if (!isNonArmy) statsByPid[pid].army += 1;
 
-        let unitAlpha = 1;
-        if (this.layerFilter === "army") {
-          if (isWorker || isNonArmy) continue;
-          if (isBuilding) unitAlpha = 0.16;
-        } else if (this.layerFilter === "workers") {
-          if (!isWorker && !isBuilding) continue;
-          if (isBuilding) unitAlpha = 0.16;
-        } else if (this.layerFilter === "buildings") {
-          if (!isBuilding) continue;
-        }
+        const unitAlpha = this._getLayerAlpha(unitName);
+        if (unitAlpha === 0) continue;
 
         const cx = ox + ((ux - minX) / spanX) * drawW;
         const cy = oy + (1 - (uy - minY) / spanY) * drawH;
@@ -729,6 +878,10 @@
 
       ctx.globalAlpha = 1;
 
+      const abilityDict = this.data.ability_dict || {};
+      this._renderAbilityEffects(ctx, { ox, oy, drawW, drawH, minX, minY, spanX, spanY }, invScale, abilityDict);
+      this._renderDeathEffects(ctx, { ox, oy, drawW, drawH, minX, minY, spanX, spanY }, state0, state1, alpha, t0, invScale, unitDict);
+
       // Unit or area inspector overlay
       if (selectedUnit) {
         const ranges = getUnitRanges(selectedUnit.unitName);
@@ -782,6 +935,220 @@
         this.selectedUnitUid = null;
         this.onUnitSelect(null);
       }
+    }
+
+    _renderAbilityEffects(ctx, rect, invScale, abilityDict) {
+      const { ox, oy, drawW, drawH, minX, minY, spanX, spanY } = rect;
+      const maxLifetime = 3.0;
+      const recentCasts = this._findAbilitiesInWindow(this.currentTime - maxLifetime, this.currentTime);
+      if (!recentCasts.length) return;
+
+      const toCanvasX = (gx) => ox + ((gx - minX) / spanX) * drawW;
+      const toCanvasY = (gy) => oy + (1 - (gy - minY) / spanY) * drawH;
+
+      ctx.save();
+      for (const c of recentCasts) {
+        if (c.x === null || c.y === null) continue;
+        const abilityName = abilityDict[c.abilityId] || "";
+        const style = ABILITY_STYLES[abilityName] || {
+          kind: "bolt",
+          label: abilityName || "Cast",
+          color: this.playersById.get(c.pid)?.color_hex || "#38bdf8",
+          duration: 1.4,
+        };
+
+        const duration = style.duration || 1.8;
+        const age = this.currentTime - c.timeSec;
+        if (age < 0 || age > duration) continue;
+
+        const progress = age / duration;
+        const fade = 1 - progress;
+        const ax = toCanvasX(c.x);
+        const ay = toCanvasY(c.y);
+
+        if (style.kind === "aoe") {
+          const baseRadiusPx = Math.max((style.radius / spanX) * drawW, 6 * invScale);
+          const spawnScale = progress < 0.15 ? 0.55 + (progress / 0.15) * 0.45 : 1.0;
+          const rPx = baseRadiusPx * spawnScale;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(ax, ay, rPx, 0, Math.PI * 2);
+          ctx.fillStyle = style.fill;
+          ctx.globalAlpha = 0.85 * fade;
+          ctx.fill();
+
+          if (style.dashed) {
+            ctx.setLineDash([4 * invScale, 3 * invScale]);
+          }
+          ctx.strokeStyle = style.color;
+          ctx.globalAlpha = 0.92 * fade;
+          ctx.lineWidth = 1.6 * invScale;
+          ctx.stroke();
+          ctx.restore();
+
+          // Initial shockwave pulse inside AoE zone (0..0.55s)
+          if (age <= 0.55) {
+            const p = age / 0.55;
+            ctx.beginPath();
+            ctx.arc(ax, ay, rPx * (0.35 + p * 0.65), 0, Math.PI * 2);
+            ctx.strokeStyle = style.color;
+            ctx.globalAlpha = 0.7 * (1 - p);
+            ctx.lineWidth = 1.1 * invScale;
+            ctx.stroke();
+          }
+
+          if (this.zoom >= 1.8 && style.label) {
+            ctx.font = `600 ${Math.round(8.5 * invScale)}px Inter, system-ui, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.globalAlpha = 0.92 * fade;
+            ctx.lineWidth = 2.4 * invScale;
+            ctx.strokeStyle = "rgba(6, 9, 15, 0.9)";
+            ctx.strokeText(style.label, ax, ay - rPx - 5 * invScale);
+            ctx.fillStyle = style.color;
+            ctx.fillText(style.label, ax, ay - rPx - 5 * invScale);
+          }
+        } else {
+          const alphaMul = style.subtle ? 0.55 : 1.0;
+          const flashR = (style.subtle ? 2.5 + progress * 6.5 : 3.5 + progress * 10.0) * invScale;
+
+          ctx.beginPath();
+          ctx.arc(ax, ay, flashR, 0, Math.PI * 2);
+          ctx.strokeStyle = style.color;
+          ctx.globalAlpha = 0.85 * fade * alphaMul;
+          ctx.lineWidth = (style.subtle ? 1.2 : 1.8) * invScale;
+          ctx.stroke();
+
+          const boltSize = Math.round((style.subtle ? 9 : 12) * invScale);
+          ctx.font = `700 ${boltSize}px Inter, system-ui, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.globalAlpha = 0.95 * fade * alphaMul;
+          ctx.lineWidth = 2.4 * invScale;
+          ctx.strokeStyle = "rgba(6, 9, 15, 0.9)";
+          ctx.strokeText("⚡", ax, ay);
+          ctx.fillStyle = style.color;
+          ctx.fillText("⚡", ax, ay);
+
+          if (this.zoom >= 1.8 && style.label && !style.subtle) {
+            ctx.font = `600 ${Math.round(8.5 * invScale)}px Inter, system-ui, sans-serif`;
+            ctx.globalAlpha = 0.9 * fade;
+            ctx.lineWidth = 2.4 * invScale;
+            ctx.strokeStyle = "rgba(6, 9, 15, 0.9)";
+            ctx.strokeText(style.label, ax, ay - 9 * invScale);
+            ctx.fillStyle = style.color;
+            ctx.fillText(style.label, ax, ay - 9 * invScale);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    _renderDeathEffects(ctx, rect, state0, state1, alpha, t0, invScale, unitDict) {
+      const { ox, oy, drawW, drawH, minX, minY, spanX, spanY } = rect;
+      const fxLifetime = 4.0;
+      const recentDeaths = this._findDeathsInWindow(this.currentTime - fxLifetime, this.currentTime);
+      if (!recentDeaths.length) return;
+
+      const toCanvasX = (gx) => ox + ((gx - minX) / spanX) * drawW;
+      const toCanvasY = (gy) => oy + (1 - (gy - minY) / spanY) * drawH;
+
+      ctx.save();
+      for (const d of recentDeaths) {
+        const unitName = unitDict[d.typeId] || "Unit";
+        if (this._getLayerAlpha(unitName) === 0) continue;
+
+        const age = this.currentTime - d.timeSec;
+        if (age < 0 || age > fxLifetime) continue;
+
+        const vx = toCanvasX(d.x);
+        const vy = toCanvasY(d.y);
+        const victimColor = this.playersById.get(d.pid)?.color_hex || "#ffffff";
+        const killerColor =
+          d.killerPid !== null ? this.playersById.get(d.killerPid)?.color_hex || "#ef4444" : "#ef4444";
+
+        // 1. Kill tracer line from killer -> victim (0..0.75s)
+        if (age <= 0.75 && d.killerUid !== null) {
+          let kPos = null;
+          if (d.hasExplicitKillerPos) {
+            if (d.killerX !== null && d.killerY !== null) {
+              kPos = { x: d.killerX, y: d.killerY };
+            }
+          } else {
+            kPos = this._resolveUnitPos(d.killerUid, state0, state1, alpha, t0);
+          }
+          const dist = kPos ? Math.hypot(d.x - kPos.x, d.y - kPos.y) : 0;
+          if (kPos && dist > 0.4 && dist <= 20) {
+            const kx = toCanvasX(kPos.x);
+            const ky = toCanvasY(kPos.y);
+            const tFade = 1 - age / 0.75;
+
+            ctx.beginPath();
+            ctx.moveTo(kx, ky);
+            ctx.lineTo(vx, vy);
+            ctx.strokeStyle = killerColor;
+            ctx.globalAlpha = 0.28 * tFade;
+            ctx.lineWidth = 3.2 * invScale;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(kx, ky);
+            ctx.lineTo(vx, vy);
+            ctx.strokeStyle = "#fef08a";
+            ctx.globalAlpha = 0.85 * tFade;
+            ctx.lineWidth = 1.1 * invScale;
+            ctx.stroke();
+          }
+        }
+
+        // 2. Impact shockwave ring (0..0.85s)
+        if (age <= 0.85) {
+          const p = age / 0.85;
+          const ringR = (2.5 + p * 10.5) * invScale;
+          ctx.beginPath();
+          ctx.arc(vx, vy, ringR, 0, Math.PI * 2);
+          ctx.strokeStyle = killerColor;
+          ctx.globalAlpha = 0.85 * (1 - p);
+          ctx.lineWidth = 1.8 * invScale;
+          ctx.stroke();
+        }
+
+        // 3. Fading graveyard 'X' marker (0..4.0s)
+        const crossFade = Math.max(0, 1 - age / fxLifetime);
+        const s = 3.2 * invScale;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(vx - s, vy - s);
+        ctx.lineTo(vx + s, vy + s);
+        ctx.moveTo(vx + s, vy - s);
+        ctx.lineTo(vx - s, vy + s);
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.globalAlpha = 0.85 * crossFade;
+        ctx.lineWidth = 2.8 * invScale;
+        ctx.stroke();
+
+        ctx.strokeStyle = victimColor;
+        ctx.globalAlpha = 0.9 * crossFade;
+        ctx.lineWidth = 1.4 * invScale;
+        ctx.stroke();
+
+        // 4. Floating loss label for high-value kills or when zoomed in (0..1.6s)
+        if (age <= 1.6 && (d.value >= 150 || this.zoom >= 2.2)) {
+          const lFade = 1 - age / 1.6;
+          const dyOff = -6 * invScale - (age / 1.6) * 12 * invScale;
+          ctx.font = `600 ${Math.round(9 * invScale)}px Inter, system-ui, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.globalAlpha = 0.92 * lFade;
+          const label = `-${unitName}`;
+          ctx.lineWidth = 2.4 * invScale;
+          ctx.strokeStyle = "rgba(6, 9, 15, 0.9)";
+          ctx.strokeText(label, vx, vy + dyOff);
+          ctx.fillStyle = "#fca5a5";
+          ctx.fillText(label, vx, vy + dyOff);
+        }
+      }
+      ctx.restore();
     }
 
     _bindInteractions() {

@@ -31,8 +31,14 @@
   const playersBarEl = document.getElementById("players-bar");
 
   const timelineSlider = document.getElementById("timeline-slider");
+  const timelineDiffCanvas = document.getElementById("timeline-diff-canvas");
   const battleMarkersEl = document.getElementById("battle-markers");
+  const battleMarkerTooltipEl = document.getElementById("battle-marker-tooltip");
+  const prevBattleBtn = document.getElementById("prev-battle-btn");
+  const seekBackBtn = document.getElementById("seek-back-btn");
   const playPauseBtn = document.getElementById("play-pause-btn");
+  const seekFwdBtn = document.getElementById("seek-fwd-btn");
+  const nextBattleBtn = document.getElementById("next-battle-btn");
   const timeDisplayEl = document.getElementById("time-display");
   const hudTimeEl = document.getElementById("hud-time");
   const hudArmyCompareEl = document.getElementById("hud-army-compare");
@@ -53,6 +59,8 @@
   let buildFilterPid = "all";
   let buildFilterKind = "all";
   let isScrubbing = false;
+  let diffMetric = "army_value";
+  let battleTooltipHideTimer = null;
 
   function interpolateChartValue(times, values, timeSec) {
     if (!times?.length || !values?.length) return null;
@@ -182,6 +190,7 @@
       timeDisplayEl.textContent = `${curStr} / ${durStr}`;
       hudTimeEl.textContent = curStr;
       renderHudCompare(cur, statsByPid);
+      updateBattleNavButtons(cur);
     },
     onPlayStateChange: (playing) => {
       playPauseBtn.textContent = playing ? "⏸" : "▶";
@@ -190,6 +199,45 @@
       renderInspector(selection);
     },
   });
+
+  function getSortedBattles() {
+    const battles = currentData?.battles || [];
+    if (!battles.length) return [];
+    return [...battles].sort((a, b) => (a.start_sec || 0) - (b.start_sec || 0));
+  }
+
+  function findPrevBattle(curTime) {
+    const battles = getSortedBattles();
+    for (let i = battles.length - 1; i >= 0; i -= 1) {
+      const jumpTime = Math.max(0, (battles[i].start_sec || 0) - 3);
+      if (jumpTime < curTime - 1.0) {
+        return battles[i];
+      }
+    }
+    return null;
+  }
+
+  function findNextBattle(curTime) {
+    const battles = getSortedBattles();
+    for (let i = 0; i < battles.length; i += 1) {
+      const jumpTime = Math.max(0, (battles[i].start_sec || 0) - 3);
+      if (jumpTime > curTime + 0.5) {
+        return battles[i];
+      }
+    }
+    return null;
+  }
+
+  function jumpToBattle(b) {
+    if (!b) return;
+    player.seek(Math.max(0, (b.start_sec || 0) - 3));
+    player.focusOn(b.x, b.y, 3.0);
+  }
+
+  function updateBattleNavButtons(curTime) {
+    if (prevBattleBtn) prevBattleBtn.disabled = !findPrevBattle(curTime);
+    if (nextBattleBtn) nextBattleBtn.disabled = !findNextBattle(curTime);
+  }
 
   function formatTime(totalSec) {
     const s = Math.max(0, Math.floor(totalSec || 0));
@@ -432,19 +480,49 @@
     const dur = Math.max(1, data.meta?.duration_sec || 1);
     timelineSlider.max = String(dur);
     timelineSlider.value = "0";
-    battleMarkersEl.innerHTML = (data.battles || [])
+    hideBattleTooltip();
+
+    const battles = data.battles || [];
+    const players = data.players || [];
+    const maxBattleLoss = Math.max(1, ...battles.map(getBattleTotalLoss));
+
+    battleMarkersEl.innerHTML = battles
       .map((b, idx) => {
         const pct = Math.max(0, Math.min(100, (b.start_sec / dur) * 100));
         const jumpTime = Math.max(0, b.start_sec - 3);
         const bx = Number.isFinite(b.x) ? b.x : "";
         const by = Number.isFinite(b.y) ? b.y : "";
-        return `<span class="battle-marker-dot" style="left:${pct}%" data-time="${jumpTime}" data-x="${bx}" data-y="${by}" title="Битва #${idx + 1} (${formatTime(b.start_sec)})"></span>`;
+        const totalLoss = getBattleTotalLoss(b);
+        const ratio = Math.sqrt(totalLoss / maxBattleLoss);
+        const size = Math.round(6 + ratio * 7);
+        const opacity = (0.5 + ratio * 0.5).toFixed(2);
+        const glowAlpha = (0.45 + ratio * 0.5).toFixed(2);
+        const glowRadius = Math.round(4 + ratio * 10);
+        const lossesByPlayer = players.length
+          ? players
+              .map((p) => (b.lost_minerals?.[p.pid] || 0) + (b.lost_gas?.[p.pid] || 0))
+              .join(" vs ")
+          : String(totalLoss);
+        const tooltipText = `⚔️ ${formatTime(b.start_sec)} • Потери: ${lossesByPlayer}`;
+        const styleAttr = [
+          `left:${pct}%`,
+          `width:${size}px`,
+          `height:${size}px`,
+          `opacity:${opacity}`,
+          `box-shadow:0 0 ${glowRadius}px rgba(239,68,68,${glowAlpha})`,
+        ].join(";");
+        return `<span class="battle-marker-dot" tabindex="0" style="${styleAttr}" data-pct="${pct}" data-time="${jumpTime}" data-x="${bx}" data-y="${by}" data-tooltip="${escapeHtml(tooltipText)}" aria-label="${escapeHtml(tooltipText)}"></span>`;
       })
       .join("");
 
     battleMarkersEl.querySelectorAll(".battle-marker-dot").forEach((dot) => {
+      dot.addEventListener("mouseenter", () => showBattleTooltip(dot));
+      dot.addEventListener("focus", () => showBattleTooltip(dot));
+      dot.addEventListener("mouseleave", () => hideBattleTooltip());
+      dot.addEventListener("blur", () => hideBattleTooltip());
       dot.addEventListener("click", (e) => {
         e.stopPropagation();
+        showBattleTooltip(dot, true);
         const t = Number(dot.dataset.time) || 0;
         const bx = dot.dataset.x !== "" ? Number(dot.dataset.x) : NaN;
         const by = dot.dataset.y !== "" ? Number(dot.dataset.y) : NaN;
@@ -455,9 +533,12 @@
       });
     });
 
+    renderTimelineDiff();
+
     // Set player data
     player.setData(data, minimapImg, hdMapImg);
     syncMapModeButton();
+    updateBattleNavButtons(0);
 
     // Build Order filters & list
     renderBuildFilters(data.players || []);
@@ -686,6 +767,166 @@
     }
   }
 
+  function getBattleTotalLoss(b) {
+    const sumObj = (obj) =>
+      Object.values(obj || {}).reduce((acc, v) => acc + (Number(v) || 0), 0);
+    return sumObj(b?.lost_minerals) + sumObj(b?.lost_gas);
+  }
+
+  function showBattleTooltip(dot, autoHide = false) {
+    if (!battleMarkerTooltipEl || !dot) return;
+    if (battleTooltipHideTimer) {
+      clearTimeout(battleTooltipHideTimer);
+      battleTooltipHideTimer = null;
+    }
+    const text = dot.dataset.tooltip || "";
+    if (!text) return;
+    const pct = Number(dot.dataset.pct) || 0;
+    battleMarkerTooltipEl.textContent = text;
+    if (pct < 15) {
+      battleMarkerTooltipEl.style.left = "0";
+      battleMarkerTooltipEl.style.right = "auto";
+      battleMarkerTooltipEl.style.transform = "none";
+    } else if (pct > 85) {
+      battleMarkerTooltipEl.style.left = "auto";
+      battleMarkerTooltipEl.style.right = "0";
+      battleMarkerTooltipEl.style.transform = "none";
+    } else {
+      battleMarkerTooltipEl.style.left = `${pct}%`;
+      battleMarkerTooltipEl.style.right = "auto";
+      battleMarkerTooltipEl.style.transform = "translateX(-50%)";
+    }
+    battleMarkerTooltipEl.classList.remove("hidden");
+
+    if (autoHide) {
+      battleTooltipHideTimer = setTimeout(() => {
+        hideBattleTooltip();
+      }, 2500);
+    }
+  }
+
+  function hideBattleTooltip() {
+    if (battleTooltipHideTimer) {
+      clearTimeout(battleTooltipHideTimer);
+      battleTooltipHideTimer = null;
+    }
+    if (battleMarkerTooltipEl) {
+      battleMarkerTooltipEl.classList.add("hidden");
+    }
+  }
+
+  function renderTimelineDiff() {
+    if (!timelineDiffCanvas) return;
+    const rect = timelineDiffCanvas.getBoundingClientRect();
+    const w = rect.width || 300;
+    const h = rect.height || 38;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    timelineDiffCanvas.width = Math.round(w * dpr);
+    timelineDiffCanvas.height = Math.round(h * dpr);
+
+    const ctx = timelineDiffCanvas.getContext("2d");
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    const midY = h / 2;
+
+    // Central parity axis
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+    ctx.lineWidth = 1;
+    ctx.moveTo(0, midY);
+    ctx.lineTo(w, midY);
+    ctx.stroke();
+
+    const charts = currentData?.charts;
+    const players = currentData?.players || [];
+    const times = charts?.times_sec;
+    if (!charts || !times?.length || players.length < 2) return;
+
+    const series = charts[diffMetric];
+    if (!series) return;
+
+    const p1 = players[0];
+    const p2 = players[1];
+    const arr1 = series[p1.pid] || [];
+    const arr2 = series[p2.pid] || [];
+    if (!arr1.length && !arr2.length) return;
+
+    const dur = Math.max(1, currentData.meta?.duration_sec || times[times.length - 1] || 1);
+    const points = [];
+    let maxAbsDiff = 1;
+
+    for (let i = 0; i < times.length; i++) {
+      const diff = (Number(arr1[i]) || 0) - (Number(arr2[i]) || 0);
+      const absDiff = Math.abs(diff);
+      if (absDiff > maxAbsDiff) maxAbsDiff = absDiff;
+      points.push({
+        x: Math.max(0, Math.min(w, (times[i] / dur) * w)),
+        diff,
+      });
+    }
+
+    const amp = Math.max(4, midY - 3);
+    const coords = points.map((pt) => ({
+      x: pt.x,
+      y: midY - (pt.diff / maxAbsDiff) * amp,
+    }));
+
+    const traceArea = () => {
+      ctx.beginPath();
+      ctx.moveTo(coords[0].x, midY);
+      for (const c of coords) {
+        ctx.lineTo(c.x, c.y);
+      }
+      ctx.lineTo(coords[coords.length - 1].x, midY);
+      ctx.closePath();
+    };
+
+    const traceCurve = () => {
+      ctx.beginPath();
+      coords.forEach((c, idx) => {
+        if (idx === 0) ctx.moveTo(c.x, c.y);
+        else ctx.lineTo(c.x, c.y);
+      });
+    };
+
+    const p1Color = p1.color_hex || "#3b82f6";
+    const p2Color = p2.color_hex || "#ef4444";
+
+    // P1 advantage (above parity axis)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, w, midY);
+    ctx.clip();
+    traceArea();
+    ctx.globalAlpha = 0.32;
+    ctx.fillStyle = p1Color;
+    ctx.fill();
+    traceCurve();
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = p1Color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // P2 advantage (below parity axis)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, midY, w, h - midY);
+    ctx.clip();
+    traceArea();
+    ctx.globalAlpha = 0.32;
+    ctx.fillStyle = p2Color;
+    ctx.fill();
+    traceCurve();
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = p2Color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function switchTab(tabName) {
     document.querySelectorAll(".tab-btn").forEach((b) => {
       b.classList.toggle("active", b.dataset.tab === tabName);
@@ -695,6 +936,7 @@
     });
     if (tabName === "map") {
       player.resize();
+      renderTimelineDiff();
     } else if (tabName === "charts" && currentData) {
       renderCharts(currentData);
     }
@@ -706,6 +948,39 @@
   });
 
   playPauseBtn.addEventListener("click", () => player.togglePlay());
+  if (seekBackBtn) {
+    seekBackBtn.addEventListener("click", () => player.seek(player.currentTime - 5));
+  }
+  if (seekFwdBtn) {
+    seekFwdBtn.addEventListener("click", () => player.seek(player.currentTime + 5));
+  }
+  if (prevBattleBtn) {
+    prevBattleBtn.addEventListener("click", () => jumpToBattle(findPrevBattle(player.currentTime)));
+  }
+  if (nextBattleBtn) {
+    nextBattleBtn.addEventListener("click", () => jumpToBattle(findNextBattle(player.currentTime)));
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (!currentData) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const target = e.target;
+    const tag = target && target.tagName ? target.tagName.toLowerCase() : "";
+    if (tag === "input" || tag === "textarea" || tag === "select" || target?.isContentEditable) {
+      return;
+    }
+
+    if (e.code === "Space" || e.key === " ") {
+      e.preventDefault();
+      player.togglePlay();
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      player.seek(player.currentTime - 5);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      player.seek(player.currentTime + 5);
+    }
+  });
 
   timelineSlider.addEventListener("pointerdown", () => { isScrubbing = true; });
   timelineSlider.addEventListener("touchstart", () => { isScrubbing = true; }, { passive: true });
@@ -716,6 +991,27 @@
   timelineSlider.addEventListener("change", endScrub);
   timelineSlider.addEventListener("input", (e) => {
     player.seek(Number(e.target.value));
+  });
+
+  document.querySelectorAll(".diff-metric-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const nextMetric = btn.dataset.metric;
+      if (!nextMetric) return;
+      document.querySelectorAll(".diff-metric-btn").forEach((b) => {
+        b.classList.remove("active");
+        b.setAttribute("aria-pressed", "false");
+      });
+      btn.classList.add("active");
+      btn.setAttribute("aria-pressed", "true");
+      diffMetric = nextMetric;
+      renderTimelineDiff();
+    });
+  });
+
+  document.addEventListener("pointerdown", (e) => {
+    if (!e.target.closest?.(".battle-marker-dot")) {
+      hideBattleTooltip();
+    }
   });
 
   document.querySelectorAll(".speed-btn").forEach((btn) => {
@@ -758,8 +1054,14 @@
   });
 
   let chartResizeTimer = null;
+  let diffResizeTimer = null;
   window.addEventListener("resize", () => {
     if (!currentData) return;
+    const mapTab = document.getElementById("tab-map");
+    if (mapTab && mapTab.classList.contains("active")) {
+      if (diffResizeTimer) clearTimeout(diffResizeTimer);
+      diffResizeTimer = setTimeout(() => renderTimelineDiff(), 80);
+    }
     const chartsTab = document.getElementById("tab-charts");
     if (chartsTab && chartsTab.classList.contains("active")) {
       if (chartResizeTimer) clearTimeout(chartResizeTimer);

@@ -77,6 +77,13 @@ class ReplayData(BaseModel):
     battles: list[BattleEvent]
     build_order: list[BuildOrderItem]
     charts: ChartSeries
+    # Compact tuple per death:
+    # [time_sec, uid, pid, type_id, x, y, killer_uid, killer_pid, killer_type_id, value, killer_x, killer_y]
+    deaths: list[list[int | float | None]] = Field(default_factory=list)
+    ability_dict: dict[int, str] = Field(default_factory=dict)
+    # Compact tuple per ability cast:
+    # [time_sec, pid, ability_id, x, y]
+    ability_casts: list[list[int | float | None]] = Field(default_factory=list)
 
 
 class ParsedReplayBundle(BaseModel):

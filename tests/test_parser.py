@@ -56,6 +56,29 @@ def test_parse_real_replays_compact_json(filename: str):
     assert all(p.race in {"Zerg", "Terran", "Protoss"} for p in data.players)
     assert len(data.frames) > 10
     assert len(data.unit_dict) > 0
+    assert len(data.deaths) > 0
+    sample_death = data.deaths[0]
+    assert len(sample_death) == 12
+    assert isinstance(sample_death[0], (int, float))
+    assert sample_death[3] in data.unit_dict
+    for d in data.deaths:
+        if d[10] is not None and d[11] is not None:
+            dist = ((d[4] - d[10]) ** 2 + (d[5] - d[11]) ** 2) ** 0.5
+            assert dist <= 20.0, f"Bogus killer tracer dist={dist}"
+    assert len(data.ability_dict) > 0
+    assert len(data.ability_casts) > 0
+    sample_cast = data.ability_casts[0]
+    assert len(sample_cast) == 5
+    assert isinstance(sample_cast[0], (int, float))
+    assert sample_cast[1] in {p.pid for p in data.players}
+    assert sample_cast[2] in data.ability_dict
+    assert (sample_cast[3] is None and sample_cast[4] is None) or (
+        isinstance(sample_cast[3], (int, float)) and isinstance(sample_cast[4], (int, float))
+    )
+    assert all(
+        data.ability_casts[i][0] <= data.ability_casts[i + 1][0]
+        for i in range(len(data.ability_casts) - 1)
+    )
     assert len(data.charts.times_sec) > 5
     assert bundle.minimap_png is not None and len(bundle.minimap_png) > 1000
 
