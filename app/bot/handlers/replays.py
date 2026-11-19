@@ -57,9 +57,12 @@ def format_replay_caption(data: ReplayData) -> str:
         emoji = RACE_EMOJI.get(player.race, "⚪")
         name = html.escape(player.name)
         result_tag = "🏆" if player.result.lower() == "win" else "💀"
+        arch = f" • {html.escape(player.build_archetype)}" if player.build_archetype else ""
         lines.append(
-            f"{result_tag} {emoji} <b>{name}</b> ({player.race}) — "
-            f"APM {player.apm}, раб. {player.workers_peak}, армия {player.army_value_peak:,}"
+            f"{result_tag} {emoji} <b>{name}</b> ({player.race}{arch})\n"
+            f"   APM {player.apm} • SQ {player.spending_quotient} • "
+            f"блок {_format_duration(player.supply_block_sec)} • "
+            f"раб. {player.workers_peak} (уб. {player.workers_killed}/пот. {player.workers_lost})"
         )
 
     lines.append("")

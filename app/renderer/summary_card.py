@@ -44,6 +44,12 @@ def _format_duration(seconds: int) -> str:
     return f"{mins:02d}:{secs:02d}"
 
 
+def _format_compact(value: int) -> str:
+    if value >= 10_000:
+        return f"{value / 1000:.1f}k"
+    return f"{value:,}"
+
+
 def _format_played_at(iso_str: str) -> str:
     if not iso_str:
         return ""
@@ -183,22 +189,36 @@ def _draw_player_card(
     max_name_w = max(80, badge_x0 - text_x - 12)
     display_name = _truncate_text(draw, player.name, fonts["player_name"], max_name_w)
     draw.text((text_x, y0 + 16), display_name, font=fonts["player_name"], fill=TEXT_PRIMARY)
-    draw.text((text_x, y0 + 46), player.race, font=fonts["race"], fill=color)
+    race_line = f"{player.race} • {player.build_archetype}" if player.build_archetype else player.race
+    race_line = _truncate_text(draw, race_line, fonts["race"], max_name_w)
+    draw.text((text_x, y0 + 46), race_line, font=fonts["race"], fill=color)
 
-    # Stats row
-    stats_y = y0 + 88
+    # Stats rows
+    stats_y = y0 + 84
     draw.line((x0 + 20, stats_y - 10, x1 - 18, stats_y - 10), fill=BORDER_COLOR, width=1)
-    stats = [
+    block_str = _format_duration(player.supply_block_sec) if player.supply_block_sec else "0:00"
+    nat_sec = player.key_timings.get("natural")
+    nat_str = _format_duration(nat_sec) if nat_sec is not None else "—"
+
+    row1 = [
         ("APM", f"{player.apm}"),
+        ("SQ", f"{player.spending_quotient}" if player.spending_quotient else "—"),
+        ("BLOCK", block_str),
         ("WORKERS", f"{player.workers_peak}"),
-        ("ARMY PEAK", f"{player.army_value_peak:,}"),
-        ("LOST (M/G)", f"{player.minerals_lost:,} / {player.vespene_lost:,}"),
     ]
-    col_w = (x1 - x0 - 40) // len(stats)
-    for idx, (label, value) in enumerate(stats):
-        cx = x0 + 22 + idx * col_w
-        draw.text((cx, stats_y), label, font=fonts["stat_label"], fill=TEXT_SECONDARY)
-        draw.text((cx, stats_y + 18), value, font=fonts["stat_value"], fill=TEXT_PRIMARY)
+    row2 = [
+        ("ARMY PEAK", f"{player.army_value_peak:,}"),
+        ("W. K/L", f"{player.workers_killed} / {player.workers_lost}"),
+        ("NATURAL", nat_str),
+        ("LOST (M/G)", f"{_format_compact(player.minerals_lost)} / {_format_compact(player.vespene_lost)}"),
+    ]
+    for row_idx, row in enumerate((row1, row2)):
+        ry = stats_y + row_idx * 44
+        col_w = (x1 - x0 - 40) // len(row)
+        for idx, (label, value) in enumerate(row):
+            cx = x0 + 22 + idx * col_w
+            draw.text((cx, ry), label, font=fonts["stat_label"], fill=TEXT_SECONDARY)
+            draw.text((cx, ry + 16), value, font=fonts["stat_value"], fill=TEXT_PRIMARY)
 
 
 def render_summary_card(data: ReplayData, *, icons_dir: Path | None = None) -> bytes:
@@ -250,20 +270,20 @@ def render_summary_card(data: ReplayData, *, icons_dir: Path | None = None) -> b
     if len(data.players) >= 2:
         _draw_player_card(
             img, draw, data.players[0], player_colors[data.players[0].pid],
-            (32, 86, 574, 232), resolved_icons_dir, fonts,
+            (32, 86, 574, 266), resolved_icons_dir, fonts,
         )
         _draw_player_card(
             img, draw, data.players[1], player_colors[data.players[1].pid],
-            (626, 86, 1168, 232), resolved_icons_dir, fonts,
+            (626, 86, 1168, 266), resolved_icons_dir, fonts,
         )
         # VS badge
-        draw.ellipse((580, 139, 620, 179), fill=BG_COLOR, outline=BORDER_COLOR, width=2)
+        draw.ellipse((580, 156, 620, 196), fill=BG_COLOR, outline=BORDER_COLOR, width=2)
         vs_w = draw.textlength("VS", font=fonts["vs"])
-        draw.text((600 - vs_w / 2, 148), "VS", font=fonts["vs"], fill=TEXT_SECONDARY)
+        draw.text((600 - vs_w / 2, 165), "VS", font=fonts["vs"], fill=TEXT_SECONDARY)
 
     # Charts
     charts_img = _render_charts_image(data, player_colors)
-    img.paste(charts_img, (32, 252), charts_img)
+    img.paste(charts_img, (32, 280), charts_img)
 
     # Footer
     footer_y = 740

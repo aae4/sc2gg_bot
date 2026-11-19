@@ -24,6 +24,13 @@ class PlayerInfo(BaseModel):
     army_value_peak: int = 0
     minerals_lost: int = 0
     vespene_lost: int = 0
+    spending_quotient: int = 0
+    supply_block_sec: int = 0
+    workers_killed: int = 0
+    workers_lost: int = 0
+    avg_unspent: int = 0
+    build_archetype: str = ""
+    key_timings: dict[str, int] = Field(default_factory=dict)
 
 
 class BattleEvent(BaseModel):

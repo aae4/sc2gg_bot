@@ -17,6 +17,12 @@ from app.domain.models import (
     ReplayData,
     TimelineFrame,
 )
+from app.parser.analytics import (
+    compute_spending_quotient,
+    compute_supply_block_sec,
+    detect_build_archetype,
+    extract_key_timings,
+)
 from app.parser.battles import UnitDeathRecord, detect_battles
 
 # In LotV Faster speed, 1 real second = 22.4 game frames (16 * 1.4).
@@ -162,6 +168,9 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
 
     last_stats: dict[int, object] = {}
     stats_by_time: dict[int, dict[int, object]] = {}
+    supply_samples: dict[int, list[tuple[int, float, float]]] = {p.pid: [] for p in replay.players}
+    unspent_samples: dict[int, list[float]] = {p.pid: [] for p in replay.players}
+    income_samples: dict[int, list[float]] = {p.pid: [] for p in replay.players}
 
     for evt in replay.tracker_events:
         if type(evt).__name__ == "PlayerStatsEvent" and evt.pid in army_value:
@@ -169,6 +178,21 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
             bucket = (sec // 5) * 5
             stats_by_time.setdefault(bucket, {})[evt.pid] = evt
             last_stats[evt.pid] = evt
+            supply_samples[evt.pid].append(
+                (
+                    sec,
+                    float(getattr(evt, "food_used", 0) or 0),
+                    float(getattr(evt, "food_made", 0) or 0),
+                )
+            )
+            unspent_samples[evt.pid].append(
+                float(getattr(evt, "minerals_current", 0) or 0)
+                + float(getattr(evt, "vespene_current", 0) or 0)
+            )
+            income_samples[evt.pid].append(
+                float(getattr(evt, "minerals_collection_rate", 0) or 0)
+                + float(getattr(evt, "vespene_collection_rate", 0) or 0)
+            )
 
     for t in sorted(stats_by_time.keys()):
         if len(stats_by_time[t]) < 2:
@@ -182,24 +206,8 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
             unspent_series[pid].append(int(getattr(st, "minerals_current", 0) + getattr(st, "vespene_current", 0)))
             supply_series[pid].append(int(round(getattr(st, "food_used", 0))))
 
-    players: list[PlayerInfo] = []
-    for p in replay.players:
-        st = last_stats.get(p.pid)
-        color_hex = f"#{p.color.hex}" if hasattr(p, "color") and p.color else "#ffffff"
-        players.append(
-            PlayerInfo(
-                pid=p.pid,
-                name=p.name,
-                race=RACE_MAP.get(p.play_race, p.play_race),
-                color_hex=color_hex,
-                result=p.result or "Unknown",
-                apm=apm_by_pid.get(p.pid, 0),
-                workers_peak=max(workers_series[p.pid], default=0),
-                army_value_peak=max(army_value[p.pid], default=0),
-                minerals_lost=int(getattr(st, "minerals_lost", 0)) if st else 0,
-                vespene_lost=int(getattr(st, "vespene_lost", 0)) if st else 0,
-            )
-        )
+    workers_killed: dict[int, int] = {p.pid: 0 for p in replay.players}
+    workers_lost: dict[int, int] = {p.pid: 0 for p in replay.players}
 
     # Track unit positions, deaths, and build order
     unit_name_to_id: dict[str, int] = {}
@@ -275,6 +283,12 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
                 # Skip Drone death if it was killed by morphing into a building (no killer player)
                 if unit.name in ZERG_MORPH_EXCLUSIONS and getattr(evt, "killing_player", None) is None:
                     continue
+                if unit.name in WORKER_NAMES:
+                    workers_lost[owner.pid] += 1
+                    killer = getattr(evt, "killing_player", None)
+                    k_pid = killer.pid if killer is not None else getattr(evt, "killer_pid", None)
+                    if k_pid in workers_killed and k_pid != owner.pid:
+                        workers_killed[k_pid] += 1
                 loc = getattr(evt, "location", None) or (state[2], state[3]) if state else getattr(unit, "location", None)
                 if not loc:
                     continue
@@ -315,6 +329,41 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
             next_sample_sec += sample_step_sec
 
     battles = detect_battles(deaths)
+
+    players: list[PlayerInfo] = []
+    for p in replay.players:
+        st = last_stats.get(p.pid)
+        race = RACE_MAP.get(p.play_race, p.play_race)
+        color_hex = f"#{p.color.hex}" if hasattr(p, "color") and p.color else "#ffffff"
+        u_list = unspent_samples[p.pid]
+        i_list = income_samples[p.pid]
+        avg_unspent = sum(u_list) / len(u_list) if u_list else 0.0
+        avg_income = sum(i_list) / len(i_list) if i_list else 0.0
+        sq = compute_spending_quotient(avg_unspent, avg_income)
+        sb_sec = compute_supply_block_sec(supply_samples[p.pid])
+        timings = extract_key_timings(build_order, p.pid, race)
+        archetype = detect_build_archetype(build_order, p.pid, race, timings)
+        players.append(
+            PlayerInfo(
+                pid=p.pid,
+                name=p.name,
+                race=race,
+                color_hex=color_hex,
+                result=p.result or "Unknown",
+                apm=apm_by_pid.get(p.pid, 0),
+                workers_peak=max(workers_series[p.pid], default=0),
+                army_value_peak=max(army_value[p.pid], default=0),
+                minerals_lost=int(getattr(st, "minerals_lost", 0)) if st else 0,
+                vespene_lost=int(getattr(st, "vespene_lost", 0)) if st else 0,
+                spending_quotient=sq,
+                supply_block_sec=sb_sec,
+                workers_killed=workers_killed.get(p.pid, 0),
+                workers_lost=workers_lost.get(p.pid, 0),
+                avg_unspent=int(round(avg_unspent)),
+                build_archetype=archetype,
+                key_timings=timings,
+            )
+        )
 
     data = ReplayData(
         meta=MatchMeta(
