@@ -1,0 +1,24 @@
+[Unit]
+Description=SC2GG Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sc2gg
+Group=sc2gg
+WorkingDirectory=/opt/sc2gg_bot
+EnvironmentFile=/opt/sc2gg_bot/.env
+Environment=MPLCONFIGDIR=/tmp/matplotlib
+ExecStart=/opt/sc2gg_bot/.venv/bin/python -m app.main
+Restart=always
+RestartSec=5
+
+# Isolation hardening (does not affect other services on the host)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sc2gg_bot /opt/sc2gg_bot/data
+
+[Install]
+WantedBy=multi-user.target
