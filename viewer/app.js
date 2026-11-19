@@ -42,12 +42,14 @@
   const timeDisplayEl = document.getElementById("time-display");
   const hudTimeEl = document.getElementById("hud-time");
   const hudArmyCompareEl = document.getElementById("hud-army-compare");
+  const battleHudEl = document.getElementById("battle-hud-overlay");
   const unitTooltipEl = document.getElementById("unit-tooltip");
 
   const zoomInBtn = document.getElementById("zoom-in-btn");
   const zoomOutBtn = document.getElementById("zoom-out-btn");
   const zoomResetBtn = document.getElementById("zoom-reset-btn");
   const toggleIconsBtn = document.getElementById("toggle-icons-btn");
+  const toggleBattleHudBtn = document.getElementById("toggle-battle-hud-btn");
   const toggleMapModeBtn = document.getElementById("toggle-map-mode-btn");
 
   const buildPlayerFiltersEl = document.getElementById("build-player-filters");
@@ -61,6 +63,42 @@
   let isScrubbing = false;
   let diffMetric = "army_value";
   let battleTooltipHideTimer = null;
+  let lastBattleHudKey = "";
+  let battleHudHelpOpen = false;
+  let battleHudEnabled = (() => {
+    try {
+      const saved = window.localStorage.getItem("sc2gg_battle_hud");
+      if (saved !== null) return saved === "1";
+    } catch (_) {
+      // ignore storage errors
+    }
+    return true;
+  })();
+
+  function setBattleHudEnabled(enabled) {
+    battleHudEnabled = Boolean(enabled);
+    if (toggleBattleHudBtn) {
+      toggleBattleHudBtn.classList.toggle("active", battleHudEnabled);
+      toggleBattleHudBtn.setAttribute("aria-pressed", battleHudEnabled ? "true" : "false");
+    }
+    try {
+      window.localStorage.setItem("sc2gg_battle_hud", battleHudEnabled ? "1" : "0");
+    } catch (_) {
+      // ignore storage errors
+    }
+    lastBattleHudKey = "";
+    if (!battleHudEnabled && battleHudEl) {
+      battleHudEl.classList.add("hidden");
+      lastBattleHudKey = "hidden";
+    } else if (currentData) {
+      updateBattleHud(player.currentTime || 0);
+    }
+  }
+
+  if (toggleBattleHudBtn) {
+    toggleBattleHudBtn.classList.toggle("active", battleHudEnabled);
+    toggleBattleHudBtn.setAttribute("aria-pressed", battleHudEnabled ? "true" : "false");
+  }
 
   function interpolateChartValue(times, values, timeSec) {
     if (!times?.length || !values?.length) return null;
@@ -190,6 +228,7 @@
       timeDisplayEl.textContent = `${curStr} / ${durStr}`;
       hudTimeEl.textContent = curStr;
       renderHudCompare(cur, statsByPid);
+      updateBattleHud(cur);
       updateBattleNavButtons(cur);
     },
     onPlayStateChange: (playing) => {
@@ -237,6 +276,221 @@
   function updateBattleNavButtons(curTime) {
     if (prevBattleBtn) prevBattleBtn.disabled = !findPrevBattle(curTime);
     if (nextBattleBtn) nextBattleBtn.disabled = !findNextBattle(curTime);
+  }
+
+  function formatResourceValue(val) {
+    const n = Number(val) || 0;
+    if (n <= 0) return "0";
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+    return String(Math.round(n));
+  }
+
+  function findActiveBattle(curTime) {
+    const battles = currentData?.battles;
+    if (!battles || !battles.length) return null;
+
+    let best = null;
+    let bestInExactRange = false;
+    let bestDist = Infinity;
+
+    for (let idx = 0; idx < battles.length; idx += 1) {
+      const b = battles[idx];
+      const start = b.start_sec || 0;
+      const end = b.end_sec || 0;
+      if (curTime < start - 2 || curTime > end + 3) continue;
+
+      const inExact = curTime >= start && curTime <= end;
+      const mid = (start + end) * 0.5;
+      const dist = Math.abs(curTime - mid);
+
+      if (
+        !best ||
+        (inExact && !bestInExactRange) ||
+        (inExact === bestInExactRange && dist < bestDist)
+      ) {
+        best = { battle: b, index: idx + 1 };
+        bestInExactRange = inExact;
+        bestDist = dist;
+      }
+    }
+    return best;
+  }
+
+  function groupConsecutiveKills(deaths) {
+    if (!deaths || !deaths.length) return [];
+    const groups = [];
+    for (const d of deaths) {
+      const prev = groups[groups.length - 1];
+      if (
+        prev &&
+        prev.killerPid === d.killerPid &&
+        prev.killerTypeId === d.killerTypeId &&
+        prev.victimPid === d.pid &&
+        prev.victimTypeId === d.typeId
+      ) {
+        prev.count += 1;
+        if (d.killerUid !== null && d.killerUid !== undefined) {
+          prev.killerUids.add(d.killerUid);
+        }
+      } else {
+        const killerUids = new Set();
+        if (d.killerUid !== null && d.killerUid !== undefined) {
+          killerUids.add(d.killerUid);
+        }
+        groups.push({
+          killerPid: d.killerPid ?? null,
+          killerTypeId: d.killerTypeId ?? null,
+          victimPid: d.pid ?? null,
+          victimTypeId: d.typeId ?? null,
+          killerUids,
+          count: 1,
+        });
+      }
+    }
+    return groups.slice(-4);
+  }
+
+  function updateBattleHud(curTime) {
+    if (!battleHudEl) return;
+
+    if (!battleHudEnabled) {
+      if (lastBattleHudKey !== "hidden") {
+        battleHudEl.classList.add("hidden");
+        lastBattleHudKey = "hidden";
+      }
+      return;
+    }
+
+    const active = findActiveBattle(curTime);
+    if (!active) {
+      if (lastBattleHudKey !== "hidden") {
+        battleHudEl.classList.add("hidden");
+        lastBattleHudKey = "hidden";
+      }
+      return;
+    }
+
+    const { battle, index } = active;
+    const winStart = (battle.start_sec || 0) - 1;
+    const winEnd = Math.min(curTime, (battle.end_sec || 0) + 1);
+    const deathsInWindow =
+      typeof player._findDeathsInWindow === "function"
+        ? player._findDeathsInWindow(winStart, winEnd)
+        : [];
+
+    const secKey = Math.floor(curTime);
+    const cacheKey = `${index}|${secKey}|${deathsInWindow.length}|${battleHudHelpOpen ? 1 : 0}`;
+    if (cacheKey === lastBattleHudKey) return;
+    lastBattleHudKey = cacheKey;
+
+    const lossByPid = new Map();
+    for (const d of deathsInWindow) {
+      if (d.pid === null || d.pid === undefined) continue;
+      lossByPid.set(d.pid, (lossByPid.get(d.pid) || 0) + (d.value || 0));
+    }
+
+    const players = currentData?.players || [];
+    const playersByPid = new Map(players.map((p) => [p.pid, p]));
+    const totalLoss = players.reduce((sum, p) => sum + (lossByPid.get(p.pid) || 0), 0);
+
+    const elapsedSec = Math.max(0, Math.floor(curTime - (battle.start_sec || 0)));
+    const timerText = `длится ${formatTime(elapsedSec)}`;
+
+    const sidesHtml = players
+      .map((p) => {
+        const loss = lossByPid.get(p.pid) || 0;
+        const color = p.color_hex || "#94a3b8";
+        const lossLabel = loss > 0 ? `−${formatResourceValue(loss)}` : "0";
+        return `
+          <span class="battle-hud-side">
+            <span class="player-dot" style="background:${escapeHtml(color)}"></span>
+            <span class="battle-hud-side-name">${escapeHtml(p.name || `P${p.pid}`)}</span>
+            <span class="battle-hud-side-val">${lossLabel}</span>
+          </span>
+        `;
+      })
+      .join("");
+
+    const barSegsHtml = players.length
+      ? players
+          .map((p) => {
+            const loss = lossByPid.get(p.pid) || 0;
+            const pct = totalLoss > 0 ? (loss / totalLoss) * 100 : 100 / players.length;
+            const color = p.color_hex || "#94a3b8";
+            return `<div class="battle-hud-bar-seg" style="width:${pct.toFixed(1)}%;background:${escapeHtml(color)}"></div>`;
+          })
+          .join("")
+      : "";
+
+    const unitDict = currentData?.unit_dict || {};
+    const killGroups = groupConsecutiveKills(deathsInWindow);
+    const feedHtml = killGroups.length
+      ? `<div class="battle-hud-feed">${killGroups
+          .map((g) => {
+            const victimName = unitDict[g.victimTypeId] || "Unit";
+            const victimIcon = window.resolveUnitIconPath(victimName, iconsBase);
+            const victimColor = playersByPid.get(g.victimPid)?.color_hex || "#f1f5f9";
+            const victimCnt = g.count > 1 ? ` ×${g.count}` : "";
+            const victimChip = `
+              <span class="battle-kill-unit" style="color:${escapeHtml(victimColor)}">
+                <img class="battle-kill-icon" src="${victimIcon}" alt="" onerror="this.style.display='none'" />
+                <span>${escapeHtml(victimName)}${victimCnt}</span>
+              </span>
+            `;
+
+            const killerName = g.killerTypeId != null ? unitDict[g.killerTypeId] : null;
+            if (!killerName) {
+              return `<span class="battle-kill-chip">💀 ${victimChip}</span>`;
+            }
+
+            const killerIcon = window.resolveUnitIconPath(killerName, iconsBase);
+            const killerColor = playersByPid.get(g.killerPid)?.color_hex || "#f1f5f9";
+            const killerCnt = g.killerUids.size > 1 ? ` ×${g.killerUids.size}` : "";
+            const killerChip = `
+              <span class="battle-kill-unit" style="color:${escapeHtml(killerColor)}">
+                <img class="battle-kill-icon" src="${killerIcon}" alt="" onerror="this.style.display='none'" />
+                <span>${escapeHtml(killerName)}${killerCnt}</span>
+              </span>
+            `;
+            return `<span class="battle-kill-chip">${killerChip}<span class="battle-kill-arrow">→ 💀</span>${victimChip}</span>`;
+          })
+          .join("")}</div>`
+      : "";
+
+    const helpHtml = battleHudHelpOpen
+      ? `<div class="battle-hud-help">Потери ресурсов (минералы + газ) за текущий бой; полоса показывает долю потерь каждого игрока. Ниже — кто кого убил (💀).</div>`
+      : "";
+
+    battleHudEl.innerHTML = `
+      <div class="battle-hud-header">
+        <span class="battle-hud-title">⚔️ Битва #${index} <span class="battle-hud-sub">• Потери</span></span>
+        <span class="battle-hud-right">
+          <span class="battle-hud-timer">${timerText}</span>
+          <button type="button" class="battle-hud-action" data-hud-action="help" title="Что это?" aria-label="Пояснение">?</button>
+          <button type="button" class="battle-hud-action" data-hud-action="close" title="Скрыть сводку боя" aria-label="Скрыть">×</button>
+        </span>
+      </div>
+      ${helpHtml}
+      ${players.length ? `<div class="battle-hud-losses">${sidesHtml}</div>` : ""}
+      ${barSegsHtml ? `<div class="battle-hud-bar ${totalLoss === 0 ? "is-empty" : ""}">${barSegsHtml}</div>` : ""}
+      ${feedHtml}
+    `;
+    battleHudEl.classList.remove("hidden");
+  }
+
+  if (battleHudEl) {
+    battleHudEl.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-hud-action]");
+      if (!btn) return;
+      e.stopPropagation();
+      const action = btn.dataset.hudAction;
+      if (action === "help") {
+        battleHudHelpOpen = !battleHudHelpOpen;
+        updateBattleHud(player.currentTime || 0);
+      } else if (action === "close") {
+        setBattleHudEnabled(false);
+      }
+    });
   }
 
   function formatTime(totalSec) {
@@ -447,6 +701,7 @@
   }
 
   function renderAll(data, minimapImg, hdMapImg) {
+    lastBattleHudKey = "";
     // Header
     mapNameEl.textContent = data.meta?.map_name || "Unknown Map";
     matchMetaSubEl.textContent = `${formatTime(data.meta?.duration_sec)} • v${data.meta?.version || "?"}`;
@@ -1034,6 +1289,11 @@
     toggleIconsBtn.classList.toggle("active", next);
     player.setShowIcons(next);
   });
+  if (toggleBattleHudBtn) {
+    toggleBattleHudBtn.addEventListener("click", () => {
+      setBattleHudEnabled(!battleHudEnabled);
+    });
+  }
   if (toggleMapModeBtn) {
     toggleMapModeBtn.addEventListener("click", () => {
       player.toggleMapMode();
