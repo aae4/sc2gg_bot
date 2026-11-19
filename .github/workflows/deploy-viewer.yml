@@ -1,0 +1,36 @@
+name: Deploy Mini App Viewer
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "viewer/**"
+      - "icons/**"
+      - ".github/workflows/deploy-viewer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare static site bundle
+        run: |
+          mkdir -p _site/icons
+          cp -r viewer/* _site/
+          cp -r icons/* _site/icons/
+          touch _site/.nojekyll
+
+      - name: Deploy to gh-pages (preserving data/)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          keep_files: true
+          commit_message: "chore(viewer): deploy Mini App static assets"

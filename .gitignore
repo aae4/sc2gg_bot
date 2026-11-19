@@ -50,4 +50,9 @@ coverage.xml
 docs/_build/
 
 config.ini
+.env
+.venv/
 files/
+bot/db
+._*
+.DS_Store
