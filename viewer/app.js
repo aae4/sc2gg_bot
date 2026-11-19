@@ -433,11 +433,27 @@
     timelineSlider.max = String(dur);
     timelineSlider.value = "0";
     battleMarkersEl.innerHTML = (data.battles || [])
-      .map((b) => {
+      .map((b, idx) => {
         const pct = Math.max(0, Math.min(100, (b.start_sec / dur) * 100));
-        return `<span class="battle-marker-dot" style="left:${pct}%" title="Битва ${formatTime(b.start_sec)}"></span>`;
+        const jumpTime = Math.max(0, b.start_sec - 3);
+        const bx = Number.isFinite(b.x) ? b.x : "";
+        const by = Number.isFinite(b.y) ? b.y : "";
+        return `<span class="battle-marker-dot" style="left:${pct}%" data-time="${jumpTime}" data-x="${bx}" data-y="${by}" title="Битва #${idx + 1} (${formatTime(b.start_sec)})"></span>`;
       })
       .join("");
+
+    battleMarkersEl.querySelectorAll(".battle-marker-dot").forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const t = Number(dot.dataset.time) || 0;
+        const bx = dot.dataset.x !== "" ? Number(dot.dataset.x) : NaN;
+        const by = dot.dataset.y !== "" ? Number(dot.dataset.y) : NaN;
+        player.seek(t);
+        if (Number.isFinite(bx) && Number.isFinite(by)) {
+          player.focusOn(bx, by, 3.0);
+        }
+      });
+    });
 
     // Set player data
     player.setData(data, minimapImg, hdMapImg);
@@ -560,11 +576,15 @@
           })
           .join("");
 
+        const jumpTime = Math.max(0, b.start_sec - 3);
+        const bx = Number.isFinite(b.x) ? b.x : "";
+        const by = Number.isFinite(b.y) ? b.y : "";
+
         return `
           <div class="battle-card">
             <div class="battle-header">
               <span class="battle-time">⚔️ Битва #${idx + 1} • ${formatTime(b.start_sec)} – ${formatTime(b.end_sec)}</span>
-              <button class="btn btn-primary jump-battle-btn" data-time="${Math.max(0, b.start_sec - 3)}">▶ На карте</button>
+              <button class="btn btn-primary jump-battle-btn" data-time="${jumpTime}" data-x="${bx}" data-y="${by}">▶ На карте</button>
             </div>
             <div class="battle-players">${sidesHtml}</div>
           </div>
@@ -575,8 +595,13 @@
     battlesListEl.querySelectorAll(".jump-battle-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const t = Number(btn.dataset.time) || 0;
+        const bx = btn.dataset.x !== "" ? Number(btn.dataset.x) : NaN;
+        const by = btn.dataset.y !== "" ? Number(btn.dataset.y) : NaN;
         switchTab("map");
         player.seek(t);
+        if (Number.isFinite(bx) && Number.isFinite(by)) {
+          player.focusOn(bx, by, 3.0);
+        }
         player.play();
       });
     });

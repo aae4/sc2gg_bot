@@ -523,12 +523,19 @@ html, body {
 
 .battle-marker-dot {
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--danger);
   transform: translateX(-50%);
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.battle-marker-dot:hover {
+  transform: translateX(-50%) scale(1.45);
 }
 
 #timeline-slider {

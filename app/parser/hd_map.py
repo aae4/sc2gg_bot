@@ -123,9 +123,7 @@ def fetch_liquipedia_hd_map(
 
             info_pages = info_resp.json().get("query", {}).get("pages", {})
             img_url: str | None = None
-            for pid, pdata in info_pages.items():
-                if pid == "-1":
-                    continue
+            for pdata in info_pages.values():
                 ii = (pdata.get("imageinfo") or [{}])[0]
                 img_url = ii.get("thumburl") or ii.get("url")
                 if img_url:

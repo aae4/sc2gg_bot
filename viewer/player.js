@@ -187,6 +187,7 @@
       this.panY = 0;
 
       this._rafId = null;
+      this._cameraAnimRaf = null;
       this._lastTickMs = 0;
       this._lastRenderedUnits = [];
       this._lastTouchEndMs = 0;
@@ -200,6 +201,7 @@
 
     destroy() {
       this.pause();
+      this._cancelCameraAnim();
       this._abortController.abort();
       if (this._resizeObserver) {
         this._resizeObserver.disconnect();
@@ -426,7 +428,63 @@
       this.onUnitSelect(null);
     }
 
+    _cancelCameraAnim() {
+      if (this._cameraAnimRaf !== null) {
+        cancelAnimationFrame(this._cameraAnimRaf);
+        this._cameraAnimRaf = null;
+      }
+    }
+
+    focusOn(gx, gy, targetZoom = 3.0, durationMs = 420) {
+      if (!Number.isFinite(gx) || !Number.isFinite(gy)) return;
+      this._cancelCameraAnim();
+
+      const w = this.viewW || 300;
+      const h = this.viewH || 300;
+      const { ox, oy, drawW, drawH, minX, minY, spanX, spanY } = this._getMapRect();
+      const wx = ox + ((gx - minX) / spanX) * drawW;
+      const wy = oy + (1 - (gy - minY) / spanY) * drawH;
+
+      const toZoom = Math.max(1, Math.min(8, targetZoom));
+      const maxOffset = Math.max(w, h) * (toZoom - 1) * 0.65 + 40;
+      const toPanX = Math.max(-maxOffset, Math.min(maxOffset, w / 2 - wx * toZoom));
+      const toPanY = Math.max(-maxOffset, Math.min(maxOffset, h / 2 - wy * toZoom));
+
+      if (durationMs <= 0) {
+        this.zoom = toZoom;
+        this.panX = toPanX;
+        this.panY = toPanY;
+        this._clampPan();
+        this.render();
+        return;
+      }
+
+      const fromZoom = this.zoom;
+      const fromPanX = this.panX;
+      const fromPanY = this.panY;
+      const startMs = performance.now();
+
+      const step = (now) => {
+        const raw = Math.min(1, (now - startMs) / durationMs);
+        const eased = 1 - Math.pow(1 - raw, 3);
+        this.zoom = fromZoom + (toZoom - fromZoom) * eased;
+        this.panX = fromPanX + (toPanX - fromPanX) * eased;
+        this.panY = fromPanY + (toPanY - fromPanY) * eased;
+        this._clampPan();
+        if (!this.playing) this.render();
+
+        if (raw < 1) {
+          this._cameraAnimRaf = requestAnimationFrame(step);
+        } else {
+          this._cameraAnimRaf = null;
+        }
+      };
+
+      this._cameraAnimRaf = requestAnimationFrame(step);
+    }
+
     resetView() {
+      this._cancelCameraAnim();
       this.zoom = 1;
       this.panX = 0;
       this.panY = 0;
@@ -434,6 +492,7 @@
     }
 
     zoomBy(factor, centerX, centerY) {
+      this._cancelCameraAnim();
       const prevZoom = this.zoom;
       const nextZoom = Math.max(1, Math.min(8, prevZoom * factor));
       if (nextZoom === prevZoom) return;
@@ -747,6 +806,7 @@
 
       this.canvas.addEventListener("mousedown", (e) => {
         if (performance.now() - this._lastTouchEndMs < 450) return;
+        this._cancelCameraAnim();
         dragging = true;
         moved = false;
         startX = e.clientX;
@@ -781,6 +841,7 @@
       }, { signal: sig });
 
       this.canvas.addEventListener("touchstart", (e) => {
+        this._cancelCameraAnim();
         if (e.touches.length === 1) {
           dragging = true;
           moved = false;
