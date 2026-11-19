@@ -310,13 +310,17 @@ html, body {
   position: absolute;
   top: 10px;
   left: 10px;
+  right: 10px;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
   pointer-events: none;
+  z-index: 2;
 }
 
 .hud-pill {
-  background: rgba(11, 15, 23, 0.78);
+  background: rgba(11, 15, 23, 0.82);
   backdrop-filter: blur(6px);
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -326,6 +330,58 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+.hud-compare {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+.hud-player-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hud-player-stat .player-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.hud-vs {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.map-layer-filters {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.layer-chip {
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  padding: 6px 4px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.layer-chip.active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
 .zoom-controls {
   position: absolute;
   right: 10px;
@@ -333,6 +389,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  z-index: 3;
 }
 
 .icon-btn {
@@ -356,16 +413,85 @@ html, body {
   color: var(--accent);
 }
 
+#toggle-map-mode-btn {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .unit-tooltip {
   position: absolute;
   bottom: 10px;
   left: 10px;
-  background: rgba(11, 15, 23, 0.9);
-  border: 1px solid var(--border);
+  max-width: calc(100% - 62px);
+  max-height: 45%;
+  overflow-y: auto;
+  background: rgba(11, 15, 23, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--radius-sm);
-  padding: 6px 10px;
+  padding: 8px 10px;
   font-size: 12px;
-  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 4;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.inspector-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.inspector-close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.inspector-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.inspector-squad {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.squad-chip {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.squad-chip .player-dot {
+  width: 6px;
+  height: 6px;
 }
 
 /* Playback Controls */

@@ -7,7 +7,9 @@ class MatchMeta(BaseModel):
     map_name: str
     map_width: int
     map_height: int
+    map_bounds: list[int] | None = None
     minimap_filename: str
+    hd_map_filename: str | None = None
     duration_sec: int
     version: str
     played_at: str
@@ -80,3 +82,4 @@ class ReplayData(BaseModel):
 class ParsedReplayBundle(BaseModel):
     data: ReplayData
     minimap_png: bytes | None = None
+    hd_map_bytes: bytes | None = None

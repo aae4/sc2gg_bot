@@ -60,7 +60,7 @@
 
           <div class="canvas-overlay-top">
             <div id="hud-time" class="hud-pill">00:00</div>
-            <div id="hud-units-count" class="hud-pill muted">0 юнитов</div>
+            <div id="hud-army-compare" class="hud-pill hud-compare hidden"></div>
           </div>
 
           <div class="zoom-controls">
@@ -68,9 +68,17 @@
             <button id="zoom-out-btn" class="icon-btn" title="Отдалить">−</button>
             <button id="zoom-reset-btn" class="icon-btn" title="Сбросить масштаб">⌖</button>
             <button id="toggle-icons-btn" class="icon-btn active" title="Иконки юнитов">◈</button>
+            <button id="toggle-map-mode-btn" class="icon-btn hidden" title="Переключить вид карты: HD / Тактическая">HD</button>
           </div>
 
           <div id="unit-tooltip" class="unit-tooltip hidden"></div>
+        </div>
+
+        <div class="map-layer-filters" role="group" aria-label="Фильтр слоёв карты">
+          <button class="layer-chip active" data-layer="all">Все</button>
+          <button class="layer-chip" data-layer="army">⚔️ Армия</button>
+          <button class="layer-chip" data-layer="workers">👷 Рабочие</button>
+          <button class="layer-chip" data-layer="buildings">🏛 Здания</button>
         </div>
 
         <!-- Playback Controls -->

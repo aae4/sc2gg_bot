@@ -188,6 +188,16 @@ class GitHubApiStorage(ReplayStorage):
                 )
                 minimap_uploaded = True
 
+        if bundle.hd_map_bytes and meta.hd_map_filename:
+            hd_repo_path = self.minimap_path(meta.hd_map_filename)
+            hd_sha = await self._get_file_sha(hd_repo_path)
+            if hd_sha is None:
+                await self._put_file(
+                    hd_repo_path,
+                    bundle.hd_map_bytes,
+                    message=f"chore(minimaps): add {meta.hd_map_filename}",
+                )
+
         return StoredReplay(
             replay_id=meta.replay_id,
             json_path=json_repo_path,

@@ -43,26 +43,107 @@
     banelingcocoon: "baneling",
     broodlordcocoon: "broodlord",
     overlordcocoon: "overseer",
+    overseercocoon: "overseer",
     lurkeregg: "lurker",
     lurkermpegg: "lurker",
     transportoverlordcocoon: "overlord",
+    templararchive: "templararchives",
+    assimilatorrich: "assimilator",
+    refineryrich: "refinery",
+    extractorrich: "extractor",
   };
 
   const BUILDING_NAMES = new Set([
-    "CommandCenter", "OrbitalCommand", "PlanetaryFortress", "SupplyDepot", "SupplyDepotLowered",
-    "Refinery", "Barracks", "EngineeringBay", "Bunker", "MissileTurret", "SensorTower",
-    "Factory", "GhostAcademy", "Armory", "Starport", "FusionCore", "TechLab", "Reactor",
+    "CommandCenter", "CommandCenterFlying", "OrbitalCommand", "OrbitalCommandFlying",
+    "PlanetaryFortress", "SupplyDepot", "SupplyDepotLowered",
+    "Refinery", "RefineryRich", "Barracks", "BarracksFlying", "EngineeringBay", "Bunker",
+    "MissileTurret", "SensorTower", "Factory", "FactoryFlying", "GhostAcademy", "Armory",
+    "Starport", "StarportFlying", "FusionCore", "TechLab", "Reactor",
     "BarracksReactor", "BarracksTechLab", "FactoryReactor", "FactoryTechLab", "StarportReactor", "StarportTechLab",
-    "Nexus", "Pylon", "Assimilator", "Gateway", "WarpGate", "Forge", "CyberneticsCore",
+    "Nexus", "Pylon", "Assimilator", "AssimilatorRich", "Gateway", "WarpGate", "Forge", "CyberneticsCore",
     "PhotonCannon", "ShieldBattery", "RoboticsFacility", "RoboticsBay", "Stargate", "FleetBeacon",
-    "TwilightCouncil", "TemplarArchives", "DarkShrine",
-    "Hatchery", "Lair", "Hive", "Extractor", "SpawningPool", "EvolutionChamber",
-    "RoachWarren", "BanelingNest", "SpineCrawler", "SporeCrawler", "HydraliskDen",
-    "LurkerDen", "LurkerDenMP", "InfestationPit", "Spire", "GreaterSpire", "NydusNetwork",
-    "NydusWorm", "NydusCanal", "UltraliskCavern", "CreepTumor", "CreepTumorBurrowed", "CreepTumorQueen",
+    "TwilightCouncil", "TemplarArchive", "TemplarArchives", "DarkShrine",
+    "Hatchery", "Lair", "Hive", "Extractor", "ExtractorRich", "SpawningPool", "EvolutionChamber",
+    "RoachWarren", "BanelingNest", "SpineCrawler", "SpineCrawlerUprooted", "SporeCrawler", "SporeCrawlerUprooted",
+    "HydraliskDen", "LurkerDen", "LurkerDenMP", "InfestationPit", "Spire", "GreaterSpire",
+    "NydusNetwork", "NydusWorm", "NydusCanal", "UltraliskCavern",
+    "CreepTumor", "CreepTumorBurrowed", "CreepTumorQueen",
   ]);
 
   const WORKER_NAMES = new Set(["SCV", "Probe", "Drone"]);
+
+  // Non-army / supply / utility / summon units excluded from army counts & army layer
+  const NON_ARMY_UNIT_NAMES = new Set([
+    "Overlord", "OverlordTransport", "OverlordCocoon", "TransportOverlordCocoon",
+    "Overseer", "OverseerSiegeMode", "OverseerCocoon",
+    "Larva", "Egg", "MULE",
+    "Changeling", "ChangelingMarine", "ChangelingMarineShield",
+    "ChangelingZealot", "ChangelingZergling", "ChangelingZerglingWings",
+    "Broodling", "BroodlingEscort", "Interceptor", "LocustMP", "LocustMPFlying",
+    "AutoTurret", "PointDefenseDrone", "KD8Charge", "AdeptPhaseShift", "DisruptorPhased",
+  ]);
+
+  const UNIT_RANGES = {
+    marine: { attack: 5, sight: 9 },
+    marauder: { attack: 6, sight: 10 },
+    reaper: { attack: 5, sight: 9 },
+    ghost: { attack: 6, sight: 11 },
+    hellion: { attack: 5, sight: 10 },
+    helliontank: { attack: 2, sight: 10 },
+    siegetank: { attack: 7, sight: 11 },
+    siegetanksieged: { attack: 13, sight: 11 },
+    cyclone: { attack: 7, sight: 11 },
+    thor: { attack: 10, sight: 11 },
+    vikingfighter: { attack: 9, sight: 10 },
+    vikingassault: { attack: 6, sight: 10 },
+    liberator: { attack: 5, sight: 10 },
+    liberatorag: { attack: 10, sight: 10 },
+    banshee: { attack: 6, sight: 10 },
+    raven: { attack: 0, sight: 11 },
+    battlecruiser: { attack: 6, sight: 12 },
+    missileturret: { attack: 7, sight: 11 },
+    sensortower: { attack: 0, sight: 30 },
+    bunker: { attack: 6, sight: 10 },
+    planetaryfortress: { attack: 6, sight: 11 },
+    zealot: { attack: 0.1, sight: 9 },
+    stalker: { attack: 6, sight: 10 },
+    sentry: { attack: 5, sight: 10 },
+    adept: { attack: 4, sight: 9 },
+    immortal: { attack: 6, sight: 9 },
+    colossus: { attack: 7, sight: 10 },
+    disruptor: { attack: 0, sight: 9 },
+    hightemplar: { attack: 6, sight: 10 },
+    phoenix: { attack: 5, sight: 10 },
+    voidray: { attack: 6, sight: 10 },
+    oracle: { attack: 4, sight: 10 },
+    tempest: { attack: 14, sight: 12 },
+    carrier: { attack: 8, sight: 12 },
+    photoncannon: { attack: 7, sight: 11 },
+    observer: { attack: 0, sight: 11 },
+    observersiegemode: { attack: 0, sight: 13.75 },
+    zergling: { attack: 0.1, sight: 8 },
+    baneling: { attack: 0.25, sight: 8 },
+    roach: { attack: 4, sight: 9 },
+    ravager: { attack: 6, sight: 9 },
+    hydralisk: { attack: 5, sight: 9 },
+    lurkermp: { attack: 0, sight: 10 },
+    lurkermpburrowed: { attack: 10, sight: 10 },
+    mutalisk: { attack: 3, sight: 11 },
+    corruptor: { attack: 6, sight: 10 },
+    viper: { attack: 0, sight: 11 },
+    broodlord: { attack: 10, sight: 12 },
+    ultralisk: { attack: 1, sight: 8 },
+    queen: { attack: 5, sight: 9 },
+    spinecrawler: { attack: 7, sight: 11 },
+    sporecrawler: { attack: 7, sight: 11 },
+    overlord: { attack: 0, sight: 11 },
+    overseer: { attack: 0, sight: 11 },
+  };
+
+  function getUnitRanges(unitName) {
+    const slug = String(unitName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return UNIT_RANGES[slug] || { attack: 0, sight: 9 };
+  }
 
   function resolveUnitIconPath(unitName, iconsBase) {
     const slug = String(unitName || "")
@@ -83,6 +164,8 @@
 
       this.data = null;
       this.minimapImg = null;
+      this.hdMapImg = null;
+      this.mapMode = "hd"; // "hd" | "tactical"
       this.playersById = new Map();
       this.keyframeStates = new Map(); // frameIdx -> Map<uid, [pid, tid, x, y]>
       this.unitIconCache = new Map(); // typeId -> HTMLImageElement | null (failed)
@@ -92,6 +175,11 @@
       this.speed = 1;
       this.playing = false;
       this.showIcons = true;
+      this.layerFilter = "all"; // "all" | "army" | "workers" | "buildings"
+
+      this.selectedUnitUid = null;
+      this.inspectedArea = null; // { ux, uy, radius }
+      this._lastStatsByPid = {};
 
       // View transform (pan & zoom)
       this.zoom = 1;
@@ -101,6 +189,8 @@
       this._rafId = null;
       this._lastTickMs = 0;
       this._lastRenderedUnits = [];
+      this._lastTouchEndMs = 0;
+      this._abortController = new AbortController();
 
       this._bindInteractions();
       this._resizeObserver = new ResizeObserver(() => this.resize());
@@ -108,12 +198,25 @@
       this.resize();
     }
 
-    setData(replayData, minimapImg) {
+    destroy() {
+      this.pause();
+      this._abortController.abort();
+      if (this._resizeObserver) {
+        this._resizeObserver.disconnect();
+      }
+    }
+
+    setData(replayData, minimapImg, hdMapImg) {
       this.pause();
       this.data = replayData;
       this.minimapImg = minimapImg || null;
+      this.hdMapImg = hdMapImg || null;
+      this.mapMode = this.hasHdMap() ? "hd" : "tactical";
       this.duration = Math.max(1, replayData.meta?.duration_sec || 1);
       this.currentTime = 0;
+      this.selectedUnitUid = null;
+      this.inspectedArea = null;
+      this.onUnitSelect(null);
 
       this.playersById.clear();
       for (const p of replayData.players || []) {
@@ -123,7 +226,12 @@
       this._buildKeyframeCache();
       this.resetView();
       this.render();
-      this.onTimeUpdate(this.currentTime, this.duration, this._countUnitsAt(0));
+      this.onTimeUpdate(
+        this.currentTime,
+        this.duration,
+        this._lastRenderedUnits.length,
+        this._lastStatsByPid
+      );
     }
 
     _buildKeyframeCache() {
@@ -206,11 +314,6 @@
       return { idx0, idx1, alpha: Math.max(0, Math.min(1, alpha)) };
     }
 
-    _countUnitsAt(timeSec) {
-      const { idx0 } = this._findFrameBracket(timeSec);
-      return this._getStateAtFrame(idx0).size;
-    }
-
     _getUnitIcon(typeId) {
       if (this.unitIconCache.has(typeId)) {
         return this.unitIconCache.get(typeId);
@@ -263,7 +366,12 @@
         this._lastTickMs = now;
         this.currentTime = Math.min(this.duration, this.currentTime + dt * this.speed);
         this.render();
-        this.onTimeUpdate(this.currentTime, this.duration, this._lastRenderedUnits.length);
+        this.onTimeUpdate(
+          this.currentTime,
+          this.duration,
+          this._lastRenderedUnits.length,
+          this._lastStatsByPid
+        );
         if (this.currentTime >= this.duration) {
           this.pause();
           return;
@@ -289,7 +397,12 @@
     seek(timeSec) {
       this.currentTime = Math.max(0, Math.min(this.duration, Number(timeSec) || 0));
       this.render();
-      this.onTimeUpdate(this.currentTime, this.duration, this._lastRenderedUnits.length);
+      this.onTimeUpdate(
+        this.currentTime,
+        this.duration,
+        this._lastRenderedUnits.length,
+        this._lastStatsByPid
+      );
     }
 
     setSpeed(mult) {
@@ -299,6 +412,18 @@
     setShowIcons(flag) {
       this.showIcons = Boolean(flag);
       this.render();
+    }
+
+    setLayerFilter(mode) {
+      this.layerFilter = mode || "all";
+      this.clearSelection();
+    }
+
+    clearSelection() {
+      this.selectedUnitUid = null;
+      this.inspectedArea = null;
+      this.render();
+      this.onUnitSelect(null);
     }
 
     resetView() {
@@ -331,12 +456,36 @@
       this.panY = Math.max(-maxOffset, Math.min(maxOffset, this.panY));
     }
 
+    hasHdMap() {
+      return Boolean(this.hdMapImg && this.hdMapImg.complete && this.hdMapImg.naturalWidth > 0);
+    }
+
+    setMapMode(mode) {
+      if (mode === "hd" && this.hasHdMap()) {
+        this.mapMode = "hd";
+      } else {
+        this.mapMode = "tactical";
+      }
+      this.render();
+      return this.mapMode;
+    }
+
+    toggleMapMode() {
+      return this.setMapMode(this.mapMode === "hd" ? "tactical" : "hd");
+    }
+
     _getMapRect() {
       const w = this.viewW || 300;
       const h = this.viewH || 300;
       const mw = this.data?.meta?.map_width || 200;
       const mh = this.data?.meta?.map_height || 200;
-      const aspect = mw / mh;
+      const bounds = this.data?.meta?.map_bounds;
+      const hasBounds = Array.isArray(bounds) && bounds.length === 4 && bounds[2] > bounds[0] && bounds[3] > bounds[1];
+      const minX = hasBounds ? bounds[0] : 0;
+      const minY = hasBounds ? bounds[1] : 0;
+      const spanX = hasBounds ? bounds[2] - bounds[0] : mw;
+      const spanY = hasBounds ? bounds[3] - bounds[1] : mh;
+      const aspect = spanX / spanY;
 
       let drawW = w;
       let drawH = w / aspect;
@@ -346,7 +495,7 @@
       }
       const ox = (w - drawW) / 2;
       const oy = (h - drawH) / 2;
-      return { ox, oy, drawW, drawH, mw, mh };
+      return { ox, oy, drawW, drawH, minX, minY, spanX, spanY };
     }
 
     render() {
@@ -368,12 +517,21 @@
       ctx.translate(this.panX, this.panY);
       ctx.scale(this.zoom, this.zoom);
 
-      const { ox, oy, drawW, drawH, mw, mh } = this._getMapRect();
+      const { ox, oy, drawW, drawH, minX, minY, spanX, spanY } = this._getMapRect();
 
-      // Minimap background
-      if (this.minimapImg && this.minimapImg.complete && this.minimapImg.naturalWidth > 0) {
-        ctx.drawImage(this.minimapImg, ox, oy, drawW, drawH);
-        ctx.fillStyle = "rgba(6, 9, 15, 0.25)";
+      // Map background (HD render or tactical .s2ma map)
+      const activeBg =
+        this.mapMode === "hd" && this.hasHdMap()
+          ? this.hdMapImg
+          : this.minimapImg && this.minimapImg.complete && this.minimapImg.naturalWidth > 0
+            ? this.minimapImg
+            : this.hasHdMap()
+              ? this.hdMapImg
+              : null;
+
+      if (activeBg) {
+        ctx.drawImage(activeBg, ox, oy, drawW, drawH);
+        ctx.fillStyle = this.mapMode === "hd" ? "rgba(6, 9, 15, 0.25)" : "rgba(6, 9, 15, 0.12)";
         ctx.fillRect(ox, oy, drawW, drawH);
       } else {
         ctx.fillStyle = "#111827";
@@ -396,8 +554,8 @@
       // Active battle pulses
       for (const b of this.data.battles || []) {
         if (this.currentTime >= b.start_sec - 3 && this.currentTime <= b.end_sec + 3) {
-          const bx = ox + (b.x / mw) * drawW;
-          const by = oy + (1 - b.y / mh) * drawH;
+          const bx = ox + ((b.x - minX) / spanX) * drawW;
+          const by = oy + (1 - (b.y - minY) / spanY) * drawH;
           const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 160);
           const radius = (14 + pulse * 8) / Math.sqrt(this.zoom);
           ctx.beginPath();
@@ -417,7 +575,9 @@
       const unitDict = this.data.unit_dict || {};
 
       const rendered = [];
+      const statsByPid = {};
       const invScale = 1 / Math.sqrt(this.zoom);
+      let selectedUnit = null;
 
       for (const [uid, u0] of state0.entries()) {
         const pid = u0[0];
@@ -431,16 +591,56 @@
           uy = uy + (u1[3] - uy) * alpha;
         }
 
-        const cx = ox + (ux / mw) * drawW;
-        const cy = oy + (1 - uy / mh) * drawH;
         const unitName = unitDict[typeId] || "Unit";
-        const player = this.playersById.get(pid);
-        const color = player?.color_hex || "#ffffff";
         const isBuilding = BUILDING_NAMES.has(unitName);
         const isWorker = WORKER_NAMES.has(unitName);
+        const isNonArmy = NON_ARMY_UNIT_NAMES.has(unitName);
 
-        rendered.push({ uid, pid, unitName, playerName: player?.name || `P${pid}`, cx, cy });
+        if (!statsByPid[pid]) {
+          statsByPid[pid] = { workers: 0, army: 0, buildings: 0 };
+        }
+        if (isBuilding) statsByPid[pid].buildings += 1;
+        else if (isWorker) statsByPid[pid].workers += 1;
+        else if (!isNonArmy) statsByPid[pid].army += 1;
 
+        let unitAlpha = 1;
+        if (this.layerFilter === "army") {
+          if (isWorker || isNonArmy) continue;
+          if (isBuilding) unitAlpha = 0.16;
+        } else if (this.layerFilter === "workers") {
+          if (!isWorker && !isBuilding) continue;
+          if (isBuilding) unitAlpha = 0.16;
+        } else if (this.layerFilter === "buildings") {
+          if (!isBuilding) continue;
+        }
+
+        const cx = ox + ((ux - minX) / spanX) * drawW;
+        const cy = oy + (1 - (uy - minY) / spanY) * drawH;
+        const player = this.playersById.get(pid);
+        const color = player?.color_hex || "#ffffff";
+
+        const entry = {
+          uid,
+          pid,
+          unitName,
+          playerName: player?.name || `P${pid}`,
+          color,
+          ux,
+          uy,
+          cx,
+          cy,
+          isBuilding,
+          isWorker,
+        };
+
+        if (unitAlpha === 1) {
+          rendered.push(entry);
+        }
+        if (this.selectedUnitUid === uid) {
+          selectedUnit = entry;
+        }
+
+        ctx.globalAlpha = unitAlpha;
         const icon = this.showIcons ? this._getUnitIcon(typeId) : null;
         const canDrawIcon = icon && icon._loaded && !icon._failed && (this.zoom >= 1.5 || isBuilding);
 
@@ -468,11 +668,65 @@
         }
       }
 
+      ctx.globalAlpha = 1;
+
+      // Unit or area inspector overlay
+      if (selectedUnit) {
+        const ranges = getUnitRanges(selectedUnit.unitName);
+        if (ranges.sight > 0) {
+          const sightPx = (ranges.sight / spanX) * drawW;
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([4 / this.zoom, 3 / this.zoom]);
+          ctx.arc(selectedUnit.cx, selectedUnit.cy, sightPx, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(148, 163, 184, 0.45)";
+          ctx.lineWidth = 1.2 / this.zoom;
+          ctx.stroke();
+          ctx.restore();
+        }
+        if (ranges.attack > 0.5) {
+          const atkPx = (ranges.attack / spanX) * drawW;
+          ctx.beginPath();
+          ctx.arc(selectedUnit.cx, selectedUnit.cy, atkPx, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(245, 158, 11, 0.08)";
+          ctx.fill();
+          ctx.strokeStyle = "rgba(245, 158, 11, 0.75)";
+          ctx.lineWidth = 1.4 / this.zoom;
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(selectedUnit.cx, selectedUnit.cy, 8 * invScale, 0, Math.PI * 2);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.8 / this.zoom;
+        ctx.stroke();
+      } else if (this.inspectedArea) {
+        const ax = ox + ((this.inspectedArea.ux - minX) / spanX) * drawW;
+        const ay = oy + (1 - (this.inspectedArea.uy - minY) / spanY) * drawH;
+        const ar = (this.inspectedArea.radius / spanX) * drawW;
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([5 / this.zoom, 4 / this.zoom]);
+        ctx.arc(ax, ay, ar, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(59, 130, 246, 0.08)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(59, 130, 246, 0.75)";
+        ctx.lineWidth = 1.5 / this.zoom;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      this._lastStatsByPid = statsByPid;
       this._lastRenderedUnits = rendered;
       ctx.restore();
+
+      if (this.selectedUnitUid !== null && !selectedUnit) {
+        this.selectedUnitUid = null;
+        this.onUnitSelect(null);
+      }
     }
 
     _bindInteractions() {
+      const sig = this._abortController.signal;
       let dragging = false;
       let moved = false;
       let startX = 0;
@@ -489,14 +743,15 @@
         const pos = getLocalXY(e.clientX, e.clientY);
         const factor = e.deltaY < 0 ? 1.18 : 1 / 1.18;
         this.zoomBy(factor, pos.x, pos.y);
-      }, { passive: false });
+      }, { passive: false, signal: sig });
 
       this.canvas.addEventListener("mousedown", (e) => {
+        if (performance.now() - this._lastTouchEndMs < 450) return;
         dragging = true;
         moved = false;
         startX = e.clientX;
         startY = e.clientY;
-      });
+      }, { signal: sig });
 
       window.addEventListener("mousemove", (e) => {
         if (!dragging) return;
@@ -509,16 +764,21 @@
         this.panY += dy;
         this._clampPan();
         this.render();
-      });
+      }, { signal: sig });
 
       window.addEventListener("mouseup", (e) => {
         if (!dragging) return;
         dragging = false;
+        if (performance.now() - this._lastTouchEndMs < 450) return;
         if (!moved) {
           const pos = getLocalXY(e.clientX, e.clientY);
           this._hitTest(pos.x, pos.y);
         }
-      });
+      }, { signal: sig });
+
+      window.addEventListener("blur", () => {
+        dragging = false;
+      }, { signal: sig });
 
       this.canvas.addEventListener("touchstart", (e) => {
         if (e.touches.length === 1) {
@@ -533,7 +793,7 @@
             e.touches[0].clientY - e.touches[1].clientY
           );
         }
-      }, { passive: true });
+      }, { passive: true, signal: sig });
 
       this.canvas.addEventListener("touchmove", (e) => {
         e.preventDefault();
@@ -560,16 +820,17 @@
           }
           pinchDist = dist;
         }
-      }, { passive: false });
+      }, { passive: false, signal: sig });
 
       this.canvas.addEventListener("touchend", (e) => {
+        this._lastTouchEndMs = performance.now();
         if (dragging && !moved && e.changedTouches.length === 1) {
           const pos = getLocalXY(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
           this._hitTest(pos.x, pos.y);
         }
         if (e.touches.length < 2) pinchDist = 0;
         if (e.touches.length === 0) dragging = false;
-      });
+      }, { signal: sig });
     }
 
     _hitTest(viewX, viewY) {
@@ -586,7 +847,85 @@
           best = u;
         }
       }
-      this.onUnitSelect(best);
+
+      if (best) {
+        this.selectedUnitUid = best.uid;
+        this.inspectedArea = null;
+
+        let squad = [];
+        if (!best.isBuilding) {
+          const squadCounts = new Map();
+          const squadRadius = 10;
+          for (const u of this._lastRenderedUnits) {
+            if (u.pid !== best.pid || u.isBuilding) continue;
+            if (Math.hypot(u.ux - best.ux, u.uy - best.uy) <= squadRadius) {
+              squadCounts.set(u.unitName, (squadCounts.get(u.unitName) || 0) + 1);
+            }
+          }
+          squad = Array.from(squadCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 6);
+        }
+
+        this.render();
+        this.onUnitSelect({
+          type: "unit",
+          unit: best,
+          ranges: getUnitRanges(best.unitName),
+          squad,
+        });
+        return;
+      }
+
+      // Area / squad inspection when tapping near a cluster
+      const { ox, oy, drawW, drawH, minX, minY, spanX, spanY } = this._getMapRect();
+      const gx = minX + ((worldX - ox) / drawW) * spanX;
+      const gy = minY + (1 - (worldY - oy) / drawH) * spanY;
+      const areaRadius = 12;
+
+      if (gx >= minX && gx <= minX + spanX && gy >= minY && gy <= minY + spanY) {
+        const nearby = this._lastRenderedUnits.filter(
+          (u) => !u.isBuilding && Math.hypot(u.ux - gx, u.uy - gy) <= areaRadius
+        );
+        if (nearby.length > 0) {
+          this.selectedUnitUid = null;
+          this.inspectedArea = { ux: gx, uy: gy, radius: areaRadius };
+
+          const byPlayer = new Map();
+          for (const u of nearby) {
+            if (!byPlayer.has(u.pid)) {
+              byPlayer.set(u.pid, {
+                pid: u.pid,
+                playerName: u.playerName,
+                color: u.color,
+                total: 0,
+                units: new Map(),
+              });
+            }
+            const grp = byPlayer.get(u.pid);
+            grp.total += 1;
+            grp.units.set(u.unitName, (grp.units.get(u.unitName) || 0) + 1);
+          }
+
+          const groups = Array.from(byPlayer.values()).map((g) => ({
+            pid: g.pid,
+            playerName: g.playerName,
+            color: g.color,
+            total: g.total,
+            units: Array.from(g.units.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6),
+          }));
+
+          this.render();
+          this.onUnitSelect({
+            type: "area",
+            radius: areaRadius,
+            groups,
+          });
+          return;
+        }
+      }
+
+      this.clearSelection();
     }
   }
 

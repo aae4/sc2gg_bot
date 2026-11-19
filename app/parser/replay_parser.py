@@ -1,11 +1,9 @@
 import asyncio
 import hashlib
-import io
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from PIL import Image
 import sc2reader
 
 from app.domain.models import (
@@ -24,6 +22,8 @@ from app.parser.analytics import (
     extract_key_timings,
 )
 from app.parser.battles import UnitDeathRecord, detect_battles
+from app.parser.hd_map import resolve_hd_map
+from app.parser.tactical_map import get_camera_bounds, render_tactical_map_png
 
 # In LotV Faster speed, 1 real second = 22.4 game frames (16 * 1.4).
 FRAMES_PER_REAL_SEC = 22.4
@@ -105,15 +105,7 @@ def _frame_to_sec(frame: int) -> int:
 def _extract_minimap_png(replay: sc2reader.resources.Replay) -> bytes | None:
     try:
         replay.load_map()
-        if not getattr(replay, "map", None) or not replay.map.minimap:
-            return None
-        with Image.open(io.BytesIO(replay.map.minimap)) as img:
-            rgb = img.convert("RGB")
-            bbox = rgb.getbbox()
-            cropped = img.crop(bbox) if bbox else img
-            buf = io.BytesIO()
-            cropped.save(buf, format="PNG")
-            return buf.getvalue()
+        return render_tactical_map_png(replay)
     except Exception:
         return None
 
@@ -154,7 +146,21 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
     minimap_png = _extract_minimap_png(replay)
     map_width = getattr(getattr(getattr(replay, "map", None), "map_info", None), "width", 200)
     map_height = getattr(getattr(getattr(replay, "map", None), "map_info", None), "height", 200)
-    minimap_filename = f"{_sanitize_filename(replay.map_name)}.png"
+    bounds = get_camera_bounds(replay)
+    map_bounds = list(bounds) if bounds else None
+    sanitized_base = _sanitize_filename(replay.map_name)
+    minimap_filename = f"{sanitized_base}.png"
+    expected_aspect = (
+        (bounds[2] - bounds[0]) / (bounds[3] - bounds[1])
+        if bounds and (bounds[3] - bounds[1]) > 0
+        else (map_width / map_height if map_height else None)
+    )
+    en_map_name = getattr(getattr(replay, "map", None), "name", "") or ""
+    hd_map_filename, hd_map_bytes = resolve_hd_map(
+        [en_map_name, replay.map_name],
+        sanitized_base=sanitized_base,
+        expected_aspect=expected_aspect,
+    )
 
     played_at = datetime.fromtimestamp(replay.unix_timestamp, tz=timezone.utc).isoformat()
     apm_by_pid = _compute_apm(replay, duration_sec)
@@ -372,7 +378,9 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
             map_name=replay.map_name,
             map_width=map_width,
             map_height=map_height,
+            map_bounds=map_bounds,
             minimap_filename=minimap_filename,
+            hd_map_filename=hd_map_filename,
             duration_sec=duration_sec,
             version=replay.release_string,
             played_at=played_at,
@@ -391,7 +399,7 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
         ),
     )
 
-    return ParsedReplayBundle(data=data, minimap_png=minimap_png)
+    return ParsedReplayBundle(data=data, minimap_png=minimap_png, hd_map_bytes=hd_map_bytes)
 
 
 async def parse_replay_async(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundle:

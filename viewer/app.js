@@ -35,13 +35,14 @@
   const playPauseBtn = document.getElementById("play-pause-btn");
   const timeDisplayEl = document.getElementById("time-display");
   const hudTimeEl = document.getElementById("hud-time");
-  const hudUnitsEl = document.getElementById("hud-units-count");
+  const hudArmyCompareEl = document.getElementById("hud-army-compare");
   const unitTooltipEl = document.getElementById("unit-tooltip");
 
   const zoomInBtn = document.getElementById("zoom-in-btn");
   const zoomOutBtn = document.getElementById("zoom-out-btn");
   const zoomResetBtn = document.getElementById("zoom-reset-btn");
   const toggleIconsBtn = document.getElementById("toggle-icons-btn");
+  const toggleMapModeBtn = document.getElementById("toggle-map-mode-btn");
 
   const buildPlayerFiltersEl = document.getElementById("build-player-filters");
   const buildOrderListEl = document.getElementById("build-order-list");
@@ -51,30 +52,142 @@
   let currentData = null;
   let buildFilterPid = "all";
   let buildFilterKind = "all";
-  let tooltipTimer = null;
+  let isScrubbing = false;
+
+  function interpolateChartValue(times, values, timeSec) {
+    if (!times?.length || !values?.length) return null;
+    if (timeSec <= times[0]) return values[0] ?? null;
+    const last = Math.min(times.length, values.length) - 1;
+    if (last < 0) return null;
+    if (timeSec >= times[last]) return values[last] ?? null;
+    let lo = 0;
+    let hi = last;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (times[mid] <= timeSec) lo = mid + 1;
+      else hi = mid - 1;
+    }
+    const i0 = Math.max(0, hi);
+    const i1 = Math.min(last, i0 + 1);
+    if (values[i0] == null || values[i1] == null) return null;
+    const dt = times[i1] - times[i0];
+    const alpha = dt > 0 ? (timeSec - times[i0]) / dt : 0;
+    return values[i0] + (values[i1] - values[i0]) * alpha;
+  }
+
+  function renderHudCompare(timeSec, statsByPid) {
+    const players = currentData?.players || [];
+    if (!players.length) {
+      hudArmyCompareEl.classList.add("hidden");
+      return;
+    }
+    const times = currentData?.charts?.times_sec;
+    const armySeries = currentData?.charts?.army_value;
+
+    const parts = players.map((p) => {
+      const st = statsByPid?.[p.pid] || { workers: 0, army: 0 };
+      const val = interpolateChartValue(times, armySeries?.[p.pid], timeSec);
+      const valStr =
+        val !== null
+          ? ` (${val >= 1000 ? `${(val / 1000).toFixed(1)}k` : Math.round(val)})`
+          : "";
+      return `
+        <span class="hud-player-stat">
+          <span class="player-dot" style="background:${escapeHtml(p.color_hex || "#fff")}"></span>
+          <span>${st.workers}р • ${st.army}а${valStr}</span>
+        </span>
+      `;
+    });
+
+    hudArmyCompareEl.innerHTML = parts.join(`<span class="hud-vs">vs</span>`);
+    hudArmyCompareEl.classList.remove("hidden");
+  }
+
+  function renderInspector(selection) {
+    if (!selection) {
+      unitTooltipEl.classList.add("hidden");
+      unitTooltipEl.innerHTML = "";
+      return;
+    }
+
+    if (selection.type === "unit") {
+      const { unit, ranges, squad } = selection;
+      const atkText = ranges.attack > 0.5 ? `<span>🎯 Атака: ${ranges.attack}</span>` : "";
+      const sightText = ranges.sight > 0 ? `<span>👁 Обзор: ${ranges.sight}</span>` : "";
+      const totalNearby = squad.reduce((acc, [, cnt]) => acc + cnt, 0);
+      const squadHtml =
+        totalNearby > 1
+          ? `<div class="inspector-squad">${squad
+              .map(([name, cnt]) => `<span class="squad-chip">${escapeHtml(name)} ×${cnt}</span>`)
+              .join("")}</div>`
+          : "";
+
+      unitTooltipEl.innerHTML = `
+        <div class="inspector-header">
+          <div class="inspector-title">
+            <span class="player-dot" style="background:${escapeHtml(unit.color)}"></span>
+            <span>${escapeHtml(unit.unitName)} • ${escapeHtml(unit.playerName)}</span>
+          </div>
+          <button type="button" class="inspector-close" aria-label="Закрыть">×</button>
+        </div>
+        <div class="inspector-ranges">${sightText}${atkText}</div>
+        ${squadHtml}
+      `;
+    } else if (selection.type === "area") {
+      const summary = selection.groups
+        .map(
+          (g) =>
+            `<span class="hud-player-stat"><span class="player-dot" style="background:${escapeHtml(g.color)}"></span><span>${escapeHtml(g.playerName)}: ${g.total}</span></span>`
+        )
+        .join("");
+      const chips = [];
+      for (const g of selection.groups) {
+        for (const [name, cnt] of g.units) {
+          chips.push(`
+            <span class="squad-chip">
+              <span class="player-dot" style="background:${escapeHtml(g.color)}"></span>
+              <span>${escapeHtml(name)} ×${cnt}</span>
+            </span>
+          `);
+        }
+      }
+      unitTooltipEl.innerHTML = `
+        <div class="inspector-header">
+          <div class="inspector-title">🔍 Отряд в области</div>
+          <button type="button" class="inspector-close" aria-label="Закрыть">×</button>
+        </div>
+        <div class="inspector-ranges">${summary}</div>
+        <div class="inspector-squad">${chips.join("")}</div>
+      `;
+    }
+
+    unitTooltipEl.classList.remove("hidden");
+    const closeBtn = unitTooltipEl.querySelector(".inspector-close");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        player.clearSelection();
+      });
+    }
+  }
 
   const player = new window.ReplayPlayer(document.getElementById("map-canvas"), {
     iconsBase,
-    onTimeUpdate: (cur, dur, unitCount) => {
+    onTimeUpdate: (cur, dur, _unitCount, statsByPid) => {
       const curStr = formatTime(Math.floor(cur));
       const durStr = formatTime(Math.floor(dur));
-      timelineSlider.value = String(cur);
+      if (!isScrubbing) {
+        timelineSlider.value = String(cur);
+      }
       timeDisplayEl.textContent = `${curStr} / ${durStr}`;
       hudTimeEl.textContent = curStr;
-      hudUnitsEl.textContent = `${unitCount} юнитов`;
+      renderHudCompare(cur, statsByPid);
     },
     onPlayStateChange: (playing) => {
       playPauseBtn.textContent = playing ? "⏸" : "▶";
     },
-    onUnitSelect: (unit) => {
-      if (tooltipTimer) clearTimeout(tooltipTimer);
-      if (!unit) {
-        unitTooltipEl.classList.add("hidden");
-        return;
-      }
-      unitTooltipEl.textContent = `${unit.unitName} • ${unit.playerName}`;
-      unitTooltipEl.classList.remove("hidden");
-      tooltipTimer = setTimeout(() => unitTooltipEl.classList.add("hidden"), 2500);
+    onUnitSelect: (selection) => {
+      renderInspector(selection);
     },
   });
 
@@ -145,6 +258,32 @@
         ? `${gh.prefix}/minimaps/${encodeURIComponent(filename)}`
         : `minimaps/${encodeURIComponent(filename)}`;
       candidates.push(`https://raw.githubusercontent.com/${gh.repo}/${gh.branch}/${path}`);
+    }
+    return candidates;
+  }
+
+  function buildHdMapCandidates(meta) {
+    const candidates = [];
+    const hdFile = meta?.hd_map_filename;
+    if (hdFile) {
+      candidates.push(`${iconsBase}/maps/${encodeURIComponent(hdFile)}`);
+      candidates.push(`${dataBase}/minimaps/${encodeURIComponent(hdFile)}`);
+      const gh = inferGitHubConfig();
+      if (gh) {
+        const path = gh.prefix
+          ? `${gh.prefix}/minimaps/${encodeURIComponent(hdFile)}`
+          : `minimaps/${encodeURIComponent(hdFile)}`;
+        candidates.push(`https://raw.githubusercontent.com/${gh.repo}/${gh.branch}/${path}`);
+      }
+      return candidates;
+    }
+
+    const rawName = (meta?.map_name || "").trim();
+    if (rawName) {
+      const base = rawName.replace(/\s+(LE|TE|SE|CE|РВ)$/i, "").trim().replace(/\s+/g, "_");
+      if (base) {
+        candidates.push(`${iconsBase}/maps/${encodeURIComponent(base)}.jpg`);
+      }
     }
     return candidates;
   }
@@ -224,12 +363,13 @@
     showLoading("Загрузка реплея...", `Матч #${replayId || "local"}`);
     try {
       const data = await fetchJsonWithFallback(buildJsonCandidates(replayId));
-      const minimapImg = await loadImageWithFallback(
-        buildMinimapCandidates(data.meta?.minimap_filename)
-      );
+      const [minimapImg, hdMapImg] = await Promise.all([
+        loadImageWithFallback(buildMinimapCandidates(data.meta?.minimap_filename)),
+        loadImageWithFallback(buildHdMapCandidates(data.meta)),
+      ]);
 
       currentData = data;
-      renderAll(data, minimapImg);
+      renderAll(data, minimapImg, hdMapImg);
 
       stateScreen.classList.add("hidden");
       viewerMain.classList.remove("hidden");
@@ -243,7 +383,22 @@
     }
   }
 
-  function renderAll(data, minimapImg) {
+  function syncMapModeButton() {
+    if (!toggleMapModeBtn) return;
+    if (!player.hasHdMap()) {
+      toggleMapModeBtn.classList.add("hidden");
+      return;
+    }
+    toggleMapModeBtn.classList.remove("hidden");
+    const isHd = player.mapMode === "hd";
+    toggleMapModeBtn.classList.toggle("active", isHd);
+    toggleMapModeBtn.textContent = isHd ? "HD" : "ТК";
+    toggleMapModeBtn.title = isHd
+      ? "Режим: HD-карта (нажмите для тактической схемы)"
+      : "Режим: Тактическая схема (нажмите для HD-карты)";
+  }
+
+  function renderAll(data, minimapImg, hdMapImg) {
     // Header
     mapNameEl.textContent = data.meta?.map_name || "Unknown Map";
     matchMetaSubEl.textContent = `${formatTime(data.meta?.duration_sec)} • v${data.meta?.version || "?"}`;
@@ -285,7 +440,8 @@
       .join("");
 
     // Set player data
-    player.setData(data, minimapImg);
+    player.setData(data, minimapImg, hdMapImg);
+    syncMapModeButton();
 
     // Build Order filters & list
     renderBuildFilters(data.players || []);
@@ -526,14 +682,25 @@
 
   playPauseBtn.addEventListener("click", () => player.togglePlay());
 
+  timelineSlider.addEventListener("pointerdown", () => { isScrubbing = true; });
+  timelineSlider.addEventListener("touchstart", () => { isScrubbing = true; }, { passive: true });
+  const endScrub = () => { isScrubbing = false; };
+  timelineSlider.addEventListener("pointerup", endScrub);
+  timelineSlider.addEventListener("pointercancel", endScrub);
+  timelineSlider.addEventListener("touchend", endScrub);
+  timelineSlider.addEventListener("change", endScrub);
   timelineSlider.addEventListener("input", (e) => {
     player.seek(Number(e.target.value));
   });
 
   document.querySelectorAll(".speed-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".speed-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".speed-btn").forEach((b) => {
+        b.classList.remove("active");
+        b.setAttribute("aria-pressed", "false");
+      });
       btn.classList.add("active");
+      btn.setAttribute("aria-pressed", "true");
       player.setSpeed(Number(btn.dataset.speed));
     });
   });
@@ -545,6 +712,34 @@
     const next = !toggleIconsBtn.classList.contains("active");
     toggleIconsBtn.classList.toggle("active", next);
     player.setShowIcons(next);
+  });
+  if (toggleMapModeBtn) {
+    toggleMapModeBtn.addEventListener("click", () => {
+      player.toggleMapMode();
+      syncMapModeButton();
+    });
+  }
+
+  document.querySelectorAll(".layer-chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".layer-chip").forEach((b) => {
+        b.classList.remove("active");
+        b.setAttribute("aria-pressed", "false");
+      });
+      btn.classList.add("active");
+      btn.setAttribute("aria-pressed", "true");
+      player.setLayerFilter(btn.dataset.layer);
+    });
+  });
+
+  let chartResizeTimer = null;
+  window.addEventListener("resize", () => {
+    if (!currentData) return;
+    const chartsTab = document.getElementById("tab-charts");
+    if (chartsTab && chartsTab.classList.contains("active")) {
+      if (chartResizeTimer) clearTimeout(chartResizeTimer);
+      chartResizeTimer = setTimeout(() => renderCharts(currentData), 120);
+    }
   });
 
   document.querySelectorAll("[data-kind]").forEach((btn) => {
