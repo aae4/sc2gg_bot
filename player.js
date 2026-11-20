@@ -30,6 +30,8 @@
     factoryflying: "factory",
     starportflying: "starport",
     helliontank: "hellbat",
+    battlehellion: "hellbat",
+    thorap: "thor",
     banelingburrowed: "baneling",
     roachburrowed: "roach",
     zerglingburrowed: "zergling",
@@ -90,10 +92,13 @@
     ghost: { attack: 6, sight: 11 },
     hellion: { attack: 5, sight: 10 },
     helliontank: { attack: 2, sight: 10 },
+    battlehellion: { attack: 2, sight: 10 },
     siegetank: { attack: 7, sight: 11 },
     siegetanksieged: { attack: 13, sight: 11 },
     cyclone: { attack: 7, sight: 11 },
     thor: { attack: 10, sight: 11 },
+    thorap: { attack: 10, sight: 11 },
+    viking: { attack: 9, sight: 10 },
     vikingfighter: { attack: 9, sight: 10 },
     vikingassault: { attack: 6, sight: 10 },
     liberator: { attack: 5, sight: 10 },
@@ -192,6 +197,7 @@
       this.mapMode = "hd"; // "hd" | "tactical"
       this.playersById = new Map();
       this.keyframeStates = new Map(); // frameIdx -> Map<uid, [pid, tid, x, y]>
+      this.frameStateCache = new Map(); // LRU cache of reconstructed frame states (frameIdx -> Map)
       this.deaths = [];
       this.deathsByUid = new Map();
       this.abilityCasts = [];
@@ -267,6 +273,7 @@
 
     _buildKeyframeCache() {
       this.keyframeStates.clear();
+      this.frameStateCache.clear();
       const frames = this.data?.frames || [];
       let state = new Map();
 
@@ -294,21 +301,32 @@
       if (!frames.length) return new Map();
       const clamped = Math.max(0, Math.min(frameIdx, frames.length - 1));
 
-      // Find nearest cached keyframe <= clamped
-      let startIdx = 0;
-      for (let i = clamped; i >= 0; i--) {
-        if (this.keyframeStates.has(i)) {
-          startIdx = i;
-          break;
-        }
+      const cached = this.frameStateCache.get(clamped);
+      if (cached) {
+        // Refresh LRU order
+        this.frameStateCache.delete(clamped);
+        this.frameStateCache.set(clamped, cached);
+        return cached;
       }
 
-      const state = new Map();
-      const base = this.keyframeStates.get(startIdx);
-      if (base) {
-        for (const [uid, val] of base.entries()) {
-          state.set(uid, val);
+      let state;
+      let startIdx;
+
+      // Fast path: advance incrementally by 1 frame if previous frame is cached
+      if (clamped > 0 && !frames[clamped].is_keyframe && this.frameStateCache.has(clamped - 1)) {
+        state = new Map(this.frameStateCache.get(clamped - 1));
+        startIdx = clamped - 1;
+      } else {
+        // Find nearest cached keyframe <= clamped
+        startIdx = 0;
+        for (let i = clamped; i >= 0; i--) {
+          if (this.keyframeStates.has(i)) {
+            startIdx = i;
+            break;
+          }
         }
+        const base = this.keyframeStates.get(startIdx);
+        state = base ? new Map(base) : new Map();
       }
 
       for (let i = startIdx + 1; i <= clamped; i++) {
@@ -319,6 +337,12 @@
         for (const u of f.units || []) {
           state.set(u[0], [u[1], u[2], u[3], u[4]]);
         }
+      }
+
+      this.frameStateCache.set(clamped, state);
+      if (this.frameStateCache.size > 32) {
+        const oldestKey = this.frameStateCache.keys().next().value;
+        this.frameStateCache.delete(oldestKey);
       }
       return state;
     }
@@ -509,9 +533,16 @@
       }
       this.playing = true;
       this._lastTickMs = performance.now();
+      this._lastRenderMs = 0;
       this.onPlayStateChange(true);
+      const minFrameMs = 33; // ~30 FPS is plenty for tactical replay playback
       const tick = (now) => {
         if (!this.playing) return;
+        if (this._lastRenderMs && now - this._lastRenderMs < minFrameMs) {
+          this._rafId = requestAnimationFrame(tick);
+          return;
+        }
+        this._lastRenderMs = now;
         const dt = Math.min(0.1, (now - this._lastTickMs) / 1000);
         this._lastTickMs = now;
         this.currentTime = Math.min(this.duration, this.currentTime + dt * this.speed);
@@ -658,9 +689,23 @@
     _clampPan() {
       const w = this.viewW || 300;
       const h = this.viewH || 300;
-      const maxOffset = Math.max(w, h) * (this.zoom - 1) * 0.65 + 40;
-      this.panX = Math.max(-maxOffset, Math.min(maxOffset, this.panX));
-      this.panY = Math.max(-maxOffset, Math.min(maxOffset, this.panY));
+      const { ox, oy, drawW, drawH } = this._getMapRect();
+      const pad = 40;
+
+      const clampAxis = (pan, start, size, viewSize) => {
+        const minScreen = start * this.zoom;
+        const maxScreen = (start + size) * this.zoom;
+        if (maxScreen - minScreen <= viewSize) {
+          const centerPan = (viewSize - (minScreen + maxScreen)) / 2;
+          return Math.max(centerPan - pad, Math.min(centerPan + pad, pan));
+        }
+        const minPan = viewSize - maxScreen - pad;
+        const maxPan = pad - minScreen;
+        return Math.max(minPan, Math.min(maxPan, pan));
+      };
+
+      this.panX = clampAxis(this.panX, ox, drawW, w);
+      this.panY = clampAxis(this.panY, oy, drawH, h);
     }
 
     hasHdMap() {
@@ -1070,16 +1115,32 @@
 
         // 1. Kill tracer line from killer -> victim (0..0.75s)
         if (age <= 0.75 && d.killerUid !== null) {
+          const killerName = d.killerTypeId !== null ? (unitDict[d.killerTypeId] || "") : "";
+          const killerRanges = getUnitRanges(killerName);
+          const maxTracerDist =
+            killerRanges.attack > 0.5
+              ? Math.max(killerRanges.attack + 4.5, 6.5)
+              : killerRanges.attack > 0
+                ? 3.5
+                : 14;
+
+          const framePos = this._resolveUnitPos(d.killerUid, state0, state1, alpha, t0);
+          const frameDist = framePos ? Math.hypot(d.x - framePos.x, d.y - framePos.y) : Infinity;
+
           let kPos = null;
-          if (d.hasExplicitKillerPos) {
-            if (d.killerX !== null && d.killerY !== null) {
+          let dist = 0;
+          if (framePos && frameDist > 0.4 && frameDist <= maxTracerDist) {
+            kPos = framePos;
+            dist = frameDist;
+          } else if (d.hasExplicitKillerPos && d.killerX !== null && d.killerY !== null) {
+            const expDist = Math.hypot(d.x - d.killerX, d.y - d.killerY);
+            if (expDist > 0.4 && expDist <= maxTracerDist) {
               kPos = { x: d.killerX, y: d.killerY };
+              dist = expDist;
             }
-          } else {
-            kPos = this._resolveUnitPos(d.killerUid, state0, state1, alpha, t0);
           }
-          const dist = kPos ? Math.hypot(d.x - kPos.x, d.y - kPos.y) : 0;
-          if (kPos && dist > 0.4 && dist <= 20) {
+
+          if (kPos && dist > 0.4) {
             const kx = toCanvasX(kPos.x);
             const ky = toCanvasY(kPos.y);
             const tFade = 1 - age / 0.75;
