@@ -658,9 +658,23 @@
     _clampPan() {
       const w = this.viewW || 300;
       const h = this.viewH || 300;
-      const maxOffset = Math.max(w, h) * (this.zoom - 1) * 0.65 + 40;
-      this.panX = Math.max(-maxOffset, Math.min(maxOffset, this.panX));
-      this.panY = Math.max(-maxOffset, Math.min(maxOffset, this.panY));
+      const { ox, oy, drawW, drawH } = this._getMapRect();
+      const pad = 40;
+
+      const clampAxis = (pan, start, size, viewSize) => {
+        const minScreen = start * this.zoom;
+        const maxScreen = (start + size) * this.zoom;
+        if (maxScreen - minScreen <= viewSize) {
+          const centerPan = (viewSize - (minScreen + maxScreen)) / 2;
+          return Math.max(centerPan - pad, Math.min(centerPan + pad, pan));
+        }
+        const minPan = viewSize - maxScreen - pad;
+        const maxPan = pad - minScreen;
+        return Math.max(minPan, Math.min(maxPan, pan));
+      };
+
+      this.panX = clampAxis(this.panX, ox, drawW, w);
+      this.panY = clampAxis(this.panY, oy, drawH, h);
     }
 
     hasHdMap() {
