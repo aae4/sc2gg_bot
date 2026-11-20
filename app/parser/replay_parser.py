@@ -1,10 +1,12 @@
 import asyncio
 import hashlib
+import logging
 import math
 import re
 from bisect import bisect_right
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import sc2reader
 
@@ -26,6 +28,12 @@ from app.parser.analytics import (
 from app.parser.battles import UnitDeathRecord, detect_battles
 from app.parser.hd_map import resolve_hd_map
 from app.parser.tactical_map import get_camera_bounds, render_tactical_map_png
+from app.parser.unit_specs import IGNORED_UNIT_NAMES
+
+if TYPE_CHECKING:
+    from app.parser.simulator import SimulatedMatch
+
+logger = logging.getLogger(__name__)
 
 # In LotV Faster speed, 1 real second = 22.4 game frames (16 * 1.4).
 FRAMES_PER_REAL_SEC = 22.4
@@ -48,22 +56,6 @@ RACE_MAP = {
     "星灵": "Protoss",
     "Протоссы": "Protoss",
     "Protoss": "Protoss",
-}
-
-IGNORED_UNIT_NAMES = {
-    "Egg",
-    "Larva",
-    "Broodling",
-    "BroodlingEscort",
-    "Interceptor",
-    "LocustMP",
-    "LocustMPFlying",
-    "AutoTurret",
-    "PointDefenseDrone",
-    "KD8Charge",
-    "AdeptPhaseShift",
-    "DisruptorPhased",
-    "MULE",
 }
 
 WORKER_NAMES = {"SCV", "Probe", "Drone"}
@@ -352,8 +344,14 @@ def _sample_unit_pos(
     uid: int,
     sample_frame: int,
     fallback: tuple[float, float],
+    sim_match: "SimulatedMatch | None" = None,
 ) -> tuple[float, float]:
-    """Return rounded (x, y) for uid at sample_frame using track interpolation or fallback."""
+    """Return rounded (x, y) for uid at sample_frame using simulator or track fallback."""
+    if sim_match is not None:
+        pos = sim_match.get_unit_pos(uid, sample_frame)
+        if pos is not None:
+            return round(pos[0], 1), round(pos[1], 1)
+
     track = tracks.get(uid)
     if not track:
         return fallback
@@ -370,17 +368,23 @@ def _resolve_killer_pos(
     death_frame: int,
     victim_x: float,
     victim_y: float,
+    sim_match: "SimulatedMatch | None" = None,
 ) -> tuple[float | None, float | None]:
     """Interpolate killer position at death_frame and validate it against attack range."""
-    if killer_uid is None or killer_uid not in tracks:
+    if killer_uid is None:
         return None, None
 
-    pos = _interpolate_track_pos(
-        tracks[killer_uid],
-        death_frame,
-        max_before_frames=int(5.0 * FRAMES_PER_REAL_SEC),
-        max_after_frames=int(4.0 * FRAMES_PER_REAL_SEC),
-    )
+    pos: tuple[float, float] | None = None
+    if sim_match is not None:
+        pos = sim_match.get_unit_pos(killer_uid, death_frame, max_outside_sec=4.0)
+
+    if pos is None and killer_uid in tracks:
+        pos = _interpolate_track_pos(
+            tracks[killer_uid],
+            death_frame,
+            max_before_frames=int(5.0 * FRAMES_PER_REAL_SEC),
+            max_after_frames=int(4.0 * FRAMES_PER_REAL_SEC),
+        )
     if pos is None:
         return None, None
     kx, ky = pos
@@ -392,7 +396,11 @@ def _resolve_killer_pos(
     return round(kx, 1), round(ky, 1)
 
 
-def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundle:
+def parse_replay_file(
+    path: Path,
+    sample_step_sec: int = 3,
+    use_simulator: bool = True,
+) -> ParsedReplayBundle:
     """Parse a 1v1 .SC2Replay file into a domain ParsedReplayBundle."""
     if not path.is_file():
         raise ReplayParseError(f"Replay file not found: {path}")
@@ -503,6 +511,16 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
 
     # Group tracker events by real second for timeline sampling
     unit_tracks = _build_unit_position_tracks(replay.tracker_events)
+    sim_match: "SimulatedMatch | None" = None
+    if use_simulator:
+        try:
+            from app.parser.simulator import simulate_replay
+
+            sim_match = simulate_replay(replay, dt=0.5)
+        except Exception as exc:
+            logger.warning("Hybrid simulator failed, falling back to linear tracks: %s", exc)
+            sim_match = None
+
     events_by_sec: dict[int, list] = {}
     for evt in replay.tracker_events:
         sec = _frame_to_sec(evt.frame)
@@ -604,6 +622,7 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
                     int(getattr(evt, "frame", 0) or 0),
                     float(loc[0]),
                     float(loc[1]),
+                    sim_match=sim_match,
                 )
                 death_events.append([
                     _frame_to_exact_sec(evt.frame),
@@ -630,7 +649,15 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
             sample_frame = int(round(sec * FRAMES_PER_REAL_SEC))
             sampled_units: dict[int, tuple[int, int, float, float]] = {}
             for uid, st in active_units.items():
-                sx, sy = _sample_unit_pos(unit_tracks, uid, sample_frame, (st[2], st[3]))
+                if sim_match is not None and sim_match.is_in_cargo(uid, sample_frame):
+                    continue
+                sx, sy = _sample_unit_pos(
+                    unit_tracks,
+                    uid,
+                    sample_frame,
+                    (st[2], st[3]),
+                    sim_match=sim_match,
+                )
                 sampled_units[uid] = (st[0], st[1], sx, sy)
 
             is_keyframe = (sample_idx % 20 == 0)  # full snapshot every ~60s for fast seeking
