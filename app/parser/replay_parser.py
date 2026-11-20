@@ -312,6 +312,57 @@ def _build_unit_position_tracks(
     return tracks
 
 
+def _interpolate_track_pos(
+    track: tuple[list[int], list[tuple[float, float]]],
+    target_frame: int,
+    max_before_frames: int | None = None,
+    max_after_frames: int | None = None,
+) -> tuple[float, float] | None:
+    """Linearly interpolate a unit's (x, y) position at target_frame from its sorted track."""
+    frames, coords = track
+    if not frames:
+        return None
+
+    idx = bisect_right(frames, target_frame)
+    has_before = idx > 0 and (
+        max_before_frames is None or (target_frame - frames[idx - 1]) <= max_before_frames
+    )
+    has_after = idx < len(frames) and (
+        max_after_frames is None or (frames[idx] - target_frame) <= max_after_frames
+    )
+
+    if has_before and has_after:
+        f0 = frames[idx - 1]
+        f1 = frames[idx]
+        x0, y0 = coords[idx - 1]
+        x1, y1 = coords[idx]
+        if f1 > f0:
+            t = (target_frame - f0) / (f1 - f0)
+            return x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+        return x0, y0
+    if has_after:
+        return coords[idx]
+    if has_before:
+        return coords[idx - 1]
+    return None
+
+
+def _sample_unit_pos(
+    tracks: dict[int, tuple[list[int], list[tuple[float, float]]]],
+    uid: int,
+    sample_frame: int,
+    fallback: tuple[float, float],
+) -> tuple[float, float]:
+    """Return rounded (x, y) for uid at sample_frame using track interpolation or fallback."""
+    track = tracks.get(uid)
+    if not track:
+        return fallback
+    pos = _interpolate_track_pos(track, sample_frame)
+    if pos is None:
+        return fallback
+    return round(pos[0], 1), round(pos[1], 1)
+
+
 def _resolve_killer_pos(
     tracks: dict[int, tuple[list[int], list[tuple[float, float]]]],
     killer_uid: int | None,
@@ -324,34 +375,15 @@ def _resolve_killer_pos(
     if killer_uid is None or killer_uid not in tracks:
         return None, None
 
-    frames, coords = tracks[killer_uid]
-    if not frames:
+    pos = _interpolate_track_pos(
+        tracks[killer_uid],
+        death_frame,
+        max_before_frames=int(5.0 * FRAMES_PER_REAL_SEC),
+        max_after_frames=int(4.0 * FRAMES_PER_REAL_SEC),
+    )
+    if pos is None:
         return None, None
-
-    max_before_frames = int(5.0 * FRAMES_PER_REAL_SEC)
-    max_after_frames = int(4.0 * FRAMES_PER_REAL_SEC)
-
-    idx = bisect_right(frames, death_frame)
-    has_before = idx > 0 and (death_frame - frames[idx - 1]) <= max_before_frames
-    has_after = idx < len(frames) and (frames[idx] - death_frame) <= max_after_frames
-
-    if has_before and has_after:
-        f0 = frames[idx - 1]
-        f1 = frames[idx]
-        x0, y0 = coords[idx - 1]
-        x1, y1 = coords[idx]
-        if f1 > f0:
-            t = (death_frame - f0) / (f1 - f0)
-            kx = x0 + (x1 - x0) * t
-            ky = y0 + (y1 - y0) * t
-        else:
-            kx, ky = x0, y0
-    elif has_after:
-        kx, ky = coords[idx]
-    elif has_before:
-        kx, ky = coords[idx - 1]
-    else:
-        return None, None
+    kx, ky = pos
 
     dist = math.hypot(victim_x - kx, victim_y - ky)
     if dist <= 0.4 or dist > _get_killer_max_tracer_dist(killer_name):
@@ -595,20 +627,26 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
                     build_order.append(BuildOrderItem(time_sec=sec, pid=pid, name=up_name, kind="upgrade"))
 
         if sec >= next_sample_sec:
+            sample_frame = int(round(sec * FRAMES_PER_REAL_SEC))
+            sampled_units: dict[int, tuple[int, int, float, float]] = {}
+            for uid, st in active_units.items():
+                sx, sy = _sample_unit_pos(unit_tracks, uid, sample_frame, (st[2], st[3]))
+                sampled_units[uid] = (st[0], st[1], sx, sy)
+
             is_keyframe = (sample_idx % 20 == 0)  # full snapshot every ~60s for fast seeking
             if is_keyframe:
-                snapshot = [[uid, st[0], st[1], st[2], st[3]] for uid, st in active_units.items()]
+                snapshot = [[uid, cur[0], cur[1], cur[2], cur[3]] for uid, cur in sampled_units.items()]
                 frames.append(TimelineFrame(time_sec=sec, is_keyframe=True, units=snapshot))
             else:
-                changed = []
-                for uid, st in active_units.items():
-                    cur = (st[0], st[1], st[2], st[3])
-                    if last_sent_units.get(uid) != cur:
-                        changed.append([uid, st[0], st[1], st[2], st[3]])
-                removed = [uid for uid in last_sent_units if uid not in active_units]
+                changed = [
+                    [uid, cur[0], cur[1], cur[2], cur[3]]
+                    for uid, cur in sampled_units.items()
+                    if last_sent_units.get(uid) != cur
+                ]
+                removed = [uid for uid in last_sent_units if uid not in sampled_units]
                 frames.append(TimelineFrame(time_sec=sec, is_keyframe=False, units=changed, removed=removed))
 
-            last_sent_units = {uid: (st[0], st[1], st[2], st[3]) for uid, st in active_units.items()}
+            last_sent_units = sampled_units
             sample_idx += 1
             next_sample_sec += sample_step_sec
 
