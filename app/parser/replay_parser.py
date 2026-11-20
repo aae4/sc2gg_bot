@@ -68,8 +68,8 @@ IGNORED_UNIT_NAMES = {
 
 WORKER_NAMES = {"SCV", "Probe", "Drone"}
 
-# Morphing unit types that should not count as unit deaths when replaced by a building/cocoon
-ZERG_MORPH_EXCLUSIONS = {"Drone"}
+# Morphing/merging unit types that should not count as unit deaths when replaced by a building/Archon
+ZERG_MORPH_EXCLUSIONS = {"Drone", "HighTemplar", "DarkTemplar"}
 
 ABILITY_COMMAND_EVENTS = {
     "TargetPointCommandEvent",
@@ -255,16 +255,32 @@ LONG_RANGE_KILLER_NAMES = {
     "Carrier",
     "BroodLord",
     "Thor",
+    "ThorAP",
     "LiberatorAG",
     "LurkerMPBurrowed",
     "Battlecruiser",
 }
 
+MELEE_KILLER_NAMES = {
+    "SCV",
+    "Probe",
+    "Drone",
+    "Zergling",
+    "Baneling",
+    "Zealot",
+    "DarkTemplar",
+    "Ultralisk",
+    "BattleHellion",
+    "HellionTank",
+}
+
 
 def _get_killer_max_tracer_dist(killer_name: str | None) -> float:
     if killer_name in LONG_RANGE_KILLER_NAMES:
-        return 20.0
-    return 14.0
+        return 18.0
+    if killer_name in MELEE_KILLER_NAMES:
+        return 3.5
+    return 9.5
 
 
 def _build_unit_position_tracks(
@@ -497,6 +513,15 @@ def parse_replay_file(path: Path, sample_step_sec: int = 3) -> ParsedReplayBundl
                     if unit.id in active_units and loc:
                         active_units[unit.id][2] = round(float(loc[0]), 1)
                         active_units[unit.id][3] = round(float(loc[1]), 1)
+
+            elif ename == "UnitOwnerChangeEvent":
+                unit = getattr(evt, "unit", None)
+                if unit and unit.id in active_units:
+                    new_pid = getattr(evt, "control_pid", None) or getattr(getattr(unit, "owner", None), "pid", None)
+                    if new_pid in army_value:
+                        active_units[unit.id][0] = new_pid
+                    else:
+                        active_units.pop(unit.id, None)
 
             elif ename == "UnitDiedEvent":
                 unit = getattr(evt, "unit", None)

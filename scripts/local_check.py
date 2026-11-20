@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import argparse
 import functools
+import os
+import re
 import sys
 import webbrowser
+from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
@@ -15,14 +19,82 @@ from app.domain.models import ParsedReplayBundle  # noqa: E402
 from app.parser.replay_parser import ReplayParseError, parse_replay_file  # noqa: E402
 from app.renderer.summary_card import render_summary_card  # noqa: E402
 
+_TELEGRAM_WEBAPP_SCRIPT_RE = re.compile(
+    r'^\s*<script\s+src=["\']https://telegram\.org/js/telegram-web-app\.js["\']\s*></script>\s*\r?\n?',
+    re.MULTILINE,
+)
+
+
+def _read_env_value(key: str, env_path: Path = ROOT_DIR / ".env") -> str | None:
+    """Read an environment variable from os.environ or fallback to .env file."""
+    if key in os.environ:
+        return os.environ[key]
+    if not env_path.is_file():
+        return None
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, _, v = line.partition("=")
+        if k.strip() == key:
+            return v.strip().strip("'\"")
+    return None
+
+
+def _should_load_telegram_webapp() -> bool:
+    """Return False when LOAD_TELEGRAM_WEBAPP is explicitly disabled in env/.env."""
+    value = _read_env_value("LOAD_TELEGRAM_WEBAPP")
+    if value is None or not value.strip():
+        return True
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
 
 class NoCacheHTTPRequestHandler(SimpleHTTPRequestHandler):
     """Serve local viewer/data files without browser caching."""
+
+    def __init__(self, *args, load_telegram_webapp: bool = True, **kwargs) -> None:
+        self.load_telegram_webapp = load_telegram_webapp
+        super().__init__(*args, **kwargs)
 
     def end_headers(self) -> None:
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         self.send_header("Pragma", "no-cache")
         super().end_headers()
+
+    def _is_viewer_index_request(self) -> bool:
+        path_only = urlsplit(self.path).path
+        if path_only == "/viewer":
+            return False
+        resolved = Path(self.translate_path(self.path)).resolve()
+        return resolved in (
+            (ROOT_DIR / "viewer" / "index.html").resolve(),
+            (ROOT_DIR / "viewer").resolve(),
+        )
+
+    def _serve_viewer_index(self, *, head_only: bool) -> None:
+        index_path = ROOT_DIR / "viewer" / "index.html"
+        html = index_path.read_text(encoding="utf-8")
+        if not self.load_telegram_webapp:
+            html = _TELEGRAM_WEBAPP_SCRIPT_RE.sub("", html)
+        body = html.encode("utf-8")
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if not head_only:
+            self.wfile.write(body)
+
+    def do_GET(self) -> None:
+        if not self.load_telegram_webapp and self._is_viewer_index_request():
+            self._serve_viewer_index(head_only=False)
+            return
+        super().do_GET()
+
+    def do_HEAD(self) -> None:
+        if not self.load_telegram_webapp and self._is_viewer_index_request():
+            self._serve_viewer_index(head_only=True)
+            return
+        super().do_HEAD()
 
 
 class ReusableThreadingHTTPServer(ThreadingHTTPServer):
@@ -129,10 +201,22 @@ def _print_summary(replay_path: Path, bundle: ParsedReplayBundle, viewer_url: st
     print(f"Viewer URL: {viewer_url}")
 
 
-def _serve(host: str, port: int, open_url: str | None) -> None:
-    handler = functools.partial(NoCacheHTTPRequestHandler, directory=str(ROOT_DIR))
+def _serve(
+    host: str,
+    port: int,
+    open_url: str | None,
+    *,
+    load_telegram_webapp: bool = True,
+) -> None:
+    handler = functools.partial(
+        NoCacheHTTPRequestHandler,
+        directory=str(ROOT_DIR),
+        load_telegram_webapp=load_telegram_webapp,
+    )
     server = ReusableThreadingHTTPServer((host, port), handler)
     print(f"\nЛокальный сервер запущен: http://{host}:{port}/viewer/")
+    if not load_telegram_webapp:
+        print("Режим без telegram-web-app.js (LOAD_TELEGRAM_WEBAPP=false / --no-tg).")
     print("Нажмите Ctrl+C для остановки.")
     if open_url:
         webbrowser.open(open_url)
@@ -189,12 +273,36 @@ def main() -> int:
         help="Только распарсить реплей и сохранить файлы в data/, без запуска HTTP-сервера.",
     )
     parser.add_argument(
+        "--serve-only",
+        action="store_true",
+        help="Только запустить локальный HTTP-сервер без повторного парсинга реплеев.",
+    )
+    parser.add_argument(
         "--no-open",
         action="store_true",
         help="Не открывать браузер автоматически.",
     )
+    parser.add_argument(
+        "--no-tg",
+        action="store_true",
+        help="Не подключать telegram-web-app.js при отдаче viewer/index.html (или задайте LOAD_TELEGRAM_WEBAPP=false в .env).",
+    )
 
     args = parser.parse_args()
+    if args.serve_only and args.no_serve:
+        parser.error("--serve-only нельзя использовать вместе с --no-serve.")
+
+    load_telegram_webapp = False if args.no_tg else _should_load_telegram_webapp()
+
+    if args.serve_only:
+        viewer_url = f"http://{args.host}:{args.port}/viewer/"
+        _serve(
+            args.host,
+            args.port,
+            None if args.no_open else viewer_url,
+            load_telegram_webapp=load_telegram_webapp,
+        )
+        return 0
 
     try:
         replay_paths = _resolve_replay_paths(args.replay, parse_all=args.all)
@@ -225,7 +333,12 @@ def main() -> int:
         return 1
 
     if not args.no_serve:
-        _serve(args.host, args.port, None if args.no_open else first_url)
+        _serve(
+            args.host,
+            args.port,
+            None if args.no_open else first_url,
+            load_telegram_webapp=load_telegram_webapp,
+        )
 
     return 0
 

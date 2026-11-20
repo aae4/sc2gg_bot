@@ -30,6 +30,8 @@
     factoryflying: "factory",
     starportflying: "starport",
     helliontank: "hellbat",
+    battlehellion: "hellbat",
+    thorap: "thor",
     banelingburrowed: "baneling",
     roachburrowed: "roach",
     zerglingburrowed: "zergling",
@@ -90,10 +92,13 @@
     ghost: { attack: 6, sight: 11 },
     hellion: { attack: 5, sight: 10 },
     helliontank: { attack: 2, sight: 10 },
+    battlehellion: { attack: 2, sight: 10 },
     siegetank: { attack: 7, sight: 11 },
     siegetanksieged: { attack: 13, sight: 11 },
     cyclone: { attack: 7, sight: 11 },
     thor: { attack: 10, sight: 11 },
+    thorap: { attack: 10, sight: 11 },
+    viking: { attack: 9, sight: 10 },
     vikingfighter: { attack: 9, sight: 10 },
     vikingassault: { attack: 6, sight: 10 },
     liberator: { attack: 5, sight: 10 },
@@ -1084,16 +1089,32 @@
 
         // 1. Kill tracer line from killer -> victim (0..0.75s)
         if (age <= 0.75 && d.killerUid !== null) {
+          const killerName = d.killerTypeId !== null ? (unitDict[d.killerTypeId] || "") : "";
+          const killerRanges = getUnitRanges(killerName);
+          const maxTracerDist =
+            killerRanges.attack > 0.5
+              ? Math.max(killerRanges.attack + 4.5, 6.5)
+              : killerRanges.attack > 0
+                ? 3.5
+                : 14;
+
+          const framePos = this._resolveUnitPos(d.killerUid, state0, state1, alpha, t0);
+          const frameDist = framePos ? Math.hypot(d.x - framePos.x, d.y - framePos.y) : Infinity;
+
           let kPos = null;
-          if (d.hasExplicitKillerPos) {
-            if (d.killerX !== null && d.killerY !== null) {
+          let dist = 0;
+          if (framePos && frameDist > 0.4 && frameDist <= maxTracerDist) {
+            kPos = framePos;
+            dist = frameDist;
+          } else if (d.hasExplicitKillerPos && d.killerX !== null && d.killerY !== null) {
+            const expDist = Math.hypot(d.x - d.killerX, d.y - d.killerY);
+            if (expDist > 0.4 && expDist <= maxTracerDist) {
               kPos = { x: d.killerX, y: d.killerY };
+              dist = expDist;
             }
-          } else {
-            kPos = this._resolveUnitPos(d.killerUid, state0, state1, alpha, t0);
           }
-          const dist = kPos ? Math.hypot(d.x - kPos.x, d.y - kPos.y) : 0;
-          if (kPos && dist > 0.4 && dist <= 20) {
+
+          if (kPos && dist > 0.4) {
             const kx = toCanvasX(kPos.x);
             const ky = toCanvasY(kPos.y);
             const tFade = 1 - age / 0.75;
