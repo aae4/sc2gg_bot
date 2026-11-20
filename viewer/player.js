@@ -197,6 +197,7 @@
       this.mapMode = "hd"; // "hd" | "tactical"
       this.playersById = new Map();
       this.keyframeStates = new Map(); // frameIdx -> Map<uid, [pid, tid, x, y]>
+      this.frameStateCache = new Map(); // LRU cache of reconstructed frame states (frameIdx -> Map)
       this.deaths = [];
       this.deathsByUid = new Map();
       this.abilityCasts = [];
@@ -272,6 +273,7 @@
 
     _buildKeyframeCache() {
       this.keyframeStates.clear();
+      this.frameStateCache.clear();
       const frames = this.data?.frames || [];
       let state = new Map();
 
@@ -299,21 +301,32 @@
       if (!frames.length) return new Map();
       const clamped = Math.max(0, Math.min(frameIdx, frames.length - 1));
 
-      // Find nearest cached keyframe <= clamped
-      let startIdx = 0;
-      for (let i = clamped; i >= 0; i--) {
-        if (this.keyframeStates.has(i)) {
-          startIdx = i;
-          break;
-        }
+      const cached = this.frameStateCache.get(clamped);
+      if (cached) {
+        // Refresh LRU order
+        this.frameStateCache.delete(clamped);
+        this.frameStateCache.set(clamped, cached);
+        return cached;
       }
 
-      const state = new Map();
-      const base = this.keyframeStates.get(startIdx);
-      if (base) {
-        for (const [uid, val] of base.entries()) {
-          state.set(uid, val);
+      let state;
+      let startIdx;
+
+      // Fast path: advance incrementally by 1 frame if previous frame is cached
+      if (clamped > 0 && !frames[clamped].is_keyframe && this.frameStateCache.has(clamped - 1)) {
+        state = new Map(this.frameStateCache.get(clamped - 1));
+        startIdx = clamped - 1;
+      } else {
+        // Find nearest cached keyframe <= clamped
+        startIdx = 0;
+        for (let i = clamped; i >= 0; i--) {
+          if (this.keyframeStates.has(i)) {
+            startIdx = i;
+            break;
+          }
         }
+        const base = this.keyframeStates.get(startIdx);
+        state = base ? new Map(base) : new Map();
       }
 
       for (let i = startIdx + 1; i <= clamped; i++) {
@@ -324,6 +337,12 @@
         for (const u of f.units || []) {
           state.set(u[0], [u[1], u[2], u[3], u[4]]);
         }
+      }
+
+      this.frameStateCache.set(clamped, state);
+      if (this.frameStateCache.size > 32) {
+        const oldestKey = this.frameStateCache.keys().next().value;
+        this.frameStateCache.delete(oldestKey);
       }
       return state;
     }
@@ -514,9 +533,16 @@
       }
       this.playing = true;
       this._lastTickMs = performance.now();
+      this._lastRenderMs = 0;
       this.onPlayStateChange(true);
+      const minFrameMs = 33; // ~30 FPS is plenty for tactical replay playback
       const tick = (now) => {
         if (!this.playing) return;
+        if (this._lastRenderMs && now - this._lastRenderMs < minFrameMs) {
+          this._rafId = requestAnimationFrame(tick);
+          return;
+        }
+        this._lastRenderMs = now;
         const dt = Math.min(0.1, (now - this._lastTickMs) / 1000);
         this._lastTickMs = now;
         this.currentTime = Math.min(this.duration, this.currentTime + dt * this.speed);

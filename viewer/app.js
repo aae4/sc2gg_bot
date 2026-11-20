@@ -125,10 +125,15 @@
     return values[i0] + (values[i1] - values[i0]) * alpha;
   }
 
+  let lastHudCompareHtml = "";
+
   function renderHudCompare(timeSec, statsByPid) {
     const players = currentData?.players || [];
     if (!players.length) {
-      hudArmyCompareEl.classList.add("hidden");
+      if (lastHudCompareHtml !== "__hidden__") {
+        hudArmyCompareEl.classList.add("hidden");
+        lastHudCompareHtml = "__hidden__";
+      }
       return;
     }
     const times = currentData?.charts?.times_sec;
@@ -149,8 +154,12 @@
       `;
     });
 
-    hudArmyCompareEl.innerHTML = parts.join(`<span class="hud-vs">vs</span>`);
-    hudArmyCompareEl.classList.remove("hidden");
+    const html = parts.join(`<span class="hud-vs">vs</span>`);
+    if (html !== lastHudCompareHtml) {
+      hudArmyCompareEl.innerHTML = html;
+      hudArmyCompareEl.classList.remove("hidden");
+      lastHudCompareHtml = html;
+    }
   }
 
   function renderInspector(selection) {
@@ -221,6 +230,9 @@
     }
   }
 
+  let lastTimeDisplayStr = "";
+  let lastHudTimeStr = "";
+
   const player = new window.ReplayPlayer(document.getElementById("map-canvas"), {
     iconsBase,
     onTimeUpdate: (cur, dur, _unitCount, statsByPid) => {
@@ -229,8 +241,15 @@
       if (!isScrubbing) {
         timelineSlider.value = String(cur);
       }
-      timeDisplayEl.textContent = `${curStr} / ${durStr}`;
-      hudTimeEl.textContent = curStr;
+      const displayStr = `${curStr} / ${durStr}`;
+      if (displayStr !== lastTimeDisplayStr) {
+        timeDisplayEl.textContent = displayStr;
+        lastTimeDisplayStr = displayStr;
+      }
+      if (curStr !== lastHudTimeStr) {
+        hudTimeEl.textContent = curStr;
+        lastHudTimeStr = curStr;
+      }
       renderHudCompare(cur, statsByPid);
       updateBattleHud(cur);
       updateBattleNavButtons(cur);
@@ -246,10 +265,17 @@
     },
   });
 
+  let cachedBattlesSource = null;
+  let cachedSortedBattles = [];
+
   function getSortedBattles() {
     const battles = currentData?.battles || [];
     if (!battles.length) return [];
-    return [...battles].sort((a, b) => (a.start_sec || 0) - (b.start_sec || 0));
+    if (battles !== cachedBattlesSource) {
+      cachedBattlesSource = battles;
+      cachedSortedBattles = [...battles].sort((a, b) => (a.start_sec || 0) - (b.start_sec || 0));
+    }
+    return cachedSortedBattles;
   }
 
   function findPrevBattle(curTime) {
