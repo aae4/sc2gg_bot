@@ -65,13 +65,47 @@
 
           <div id="battle-hud-overlay" class="battle-hud-overlay hidden" aria-live="polite"></div>
 
-          <div class="zoom-controls">
-            <button id="zoom-in-btn" class="icon-btn" title="Приблизить">+</button>
-            <button id="zoom-out-btn" class="icon-btn" title="Отдалить">−</button>
-            <button id="zoom-reset-btn" class="icon-btn" title="Сбросить масштаб">⌖</button>
-            <button id="toggle-icons-btn" class="icon-btn active" title="Иконки юнитов">◈</button>
-            <button id="toggle-battle-hud-btn" class="icon-btn active" title="Сводка боя (потери и убийства)">⚔️</button>
-            <button id="toggle-map-mode-btn" class="icon-btn hidden" title="Переключить вид карты: HD / Тактическая">HD</button>
+          <div class="map-mode-controls" role="group" aria-label="Режимы отображения карты">
+            <button id="toggle-icons-btn" class="icon-btn active" type="button" title="Иконки юнитов" aria-label="Иконки юнитов">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                <rect x="14" y="14" width="7" height="7" rx="1.5" />
+              </svg>
+            </button>
+            <button id="toggle-battle-hud-btn" class="icon-btn active" type="button" title="Сводка боя (потери и убийства)" aria-label="Сводка боя">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14.5 17.5L3 6V3h3l11.5 11.5" />
+                <path d="M13 19l6-6" />
+                <path d="M16 16l4 4" />
+                <path d="M19 21l2-2" />
+                <path d="M14.5 6.5L18 3h3v3l-3.5 3.5" />
+                <path d="M5 14l4 4" />
+                <path d="M7 17l-3 3" />
+                <path d="M3 19l2 2" />
+              </svg>
+            </button>
+            <button id="toggle-map-mode-btn" class="icon-btn hidden" type="button" title="Переключить вид карты: HD / Тактическая">HD</button>
+          </div>
+
+          <div class="zoom-controls" role="group" aria-label="Масштаб карты">
+            <button id="zoom-in-btn" class="icon-btn" type="button" title="Приблизить" aria-label="Приблизить">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+            <button id="zoom-out-btn" class="icon-btn" type="button" title="Отдалить" aria-label="Отдалить">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                <path d="M5 12h14" />
+              </svg>
+            </button>
+            <button id="zoom-reset-btn" class="icon-btn" type="button" title="Сбросить масштаб" aria-label="Сбросить масштаб">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="6" />
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+              </svg>
+            </button>
           </div>
 
           <div id="unit-tooltip" class="unit-tooltip hidden"></div>
@@ -104,19 +138,43 @@
 
           <div class="controls-actions">
             <div class="playback-left">
-              <button id="prev-battle-btn" class="btn btn-secondary btn-ctrl" type="button" title="Предыдущая битва" aria-label="Предыдущая битва">⏮</button>
+              <button id="prev-battle-btn" class="btn btn-secondary btn-ctrl" type="button" title="Предыдущая битва" aria-label="Предыдущая битва">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                </svg>
+              </button>
               <button id="seek-back-btn" class="btn btn-secondary btn-ctrl" type="button" title="Назад 5 сек (←)" aria-label="Назад на 5 секунд">-5с</button>
-              <button id="play-pause-btn" class="btn btn-primary btn-play" type="button" title="Пауза / Воспроизведение (Space)">▶</button>
+              <button id="play-pause-btn" class="btn btn-primary btn-play" type="button" title="Пауза / Воспроизведение (Space)" aria-label="Пауза / Воспроизведение">
+                <svg class="icon-play" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                <svg class="icon-pause hidden" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M6 5h4v14H6zm8 0h4v14h-4z" />
+                </svg>
+              </button>
               <button id="seek-fwd-btn" class="btn btn-secondary btn-ctrl" type="button" title="Вперёд 5 сек (→)" aria-label="Вперёд на 5 секунд">+5с</button>
-              <button id="next-battle-btn" class="btn btn-secondary btn-ctrl" type="button" title="Следующая битва" aria-label="Следующая битва">⏭</button>
+              <button id="next-battle-btn" class="btn btn-secondary btn-ctrl" type="button" title="Следующая битва" aria-label="Следующая битва">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M16 6h2v12h-2zm-10 12l8.5-6L6 6z" />
+                </svg>
+              </button>
               <span id="time-display" class="time-display">00:00 / 00:00</span>
             </div>
 
             <div class="controls-right">
-              <div class="diff-metric-group" role="group" aria-label="Метрика графика преимущества">
-                <button class="diff-metric-btn active" type="button" data-metric="army_value" aria-pressed="true">Армия</button>
-                <button class="diff-metric-btn" type="button" data-metric="workers" aria-pressed="false">Рабочие</button>
-                <button class="diff-metric-btn" type="button" data-metric="supply_used" aria-pressed="false">Supply</button>
+              <div class="diff-metric-wrap">
+                <span class="diff-metric-label" title="Фоновый график преимущества на таймлайне">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 3v18h18" />
+                    <path d="M7 15l4-4 4 3 5-6" />
+                  </svg>
+                  <span>График:</span>
+                </span>
+                <div class="diff-metric-group" role="group" aria-label="Метрика графика преимущества">
+                  <button class="diff-metric-btn active" type="button" data-metric="army_value" aria-pressed="true">Армия</button>
+                  <button class="diff-metric-btn" type="button" data-metric="workers" aria-pressed="false">Рабочие</button>
+                  <button class="diff-metric-btn" type="button" data-metric="supply_used" aria-pressed="false">Supply</button>
+                </div>
               </div>
 
               <div class="speed-group" role="group" aria-label="Скорость воспроизведения">
@@ -134,35 +192,48 @@
       <section id="tab-build" class="tab-panel">
         <div class="filter-bar">
           <div id="build-player-filters" class="chip-group"></div>
-          <div class="chip-group">
+          <div class="chip-group filter-kinds-row">
             <button class="chip active" data-kind="all">Все</button>
             <button class="chip" data-kind="building">Здания</button>
             <button class="chip" data-kind="unit">Юниты</button>
             <button class="chip" data-kind="upgrade">Апгрейды</button>
+            <button id="build-scroll-now-btn" type="button" class="chip chip-action" title="Прокрутить к текущей минуте матча">⏱ К моменту</button>
           </div>
-          <button id="build-scroll-now-btn" type="button" class="chip chip-action" title="Прокрутить к текущей минуте матча">⏱ На текущий момент</button>
         </div>
         <div id="build-order-list" class="build-timeline"></div>
       </section>
 
       <!-- Tab: Charts -->
       <section id="tab-charts" class="tab-panel">
+        <div id="charts-legend" class="charts-legend"></div>
         <div class="charts-grid">
           <div class="chart-card">
             <h3>Стоимость армии (ресурсы)</h3>
-            <canvas id="chart-army" class="chart-canvas"></canvas>
+            <div class="chart-canvas-wrap">
+              <canvas id="chart-army" class="chart-canvas"></canvas>
+              <div class="chart-tooltip hidden"></div>
+            </div>
           </div>
           <div class="chart-card">
             <h3>Активные рабочие</h3>
-            <canvas id="chart-workers" class="chart-canvas"></canvas>
+            <div class="chart-canvas-wrap">
+              <canvas id="chart-workers" class="chart-canvas"></canvas>
+              <div class="chart-tooltip hidden"></div>
+            </div>
           </div>
           <div class="chart-card">
             <h3>Использованный лимит (Supply)</h3>
-            <canvas id="chart-supply" class="chart-canvas"></canvas>
+            <div class="chart-canvas-wrap">
+              <canvas id="chart-supply" class="chart-canvas"></canvas>
+              <div class="chart-tooltip hidden"></div>
+            </div>
           </div>
           <div class="chart-card">
             <h3>Непотраченные ресурсы</h3>
-            <canvas id="chart-unspent" class="chart-canvas"></canvas>
+            <div class="chart-canvas-wrap">
+              <canvas id="chart-unspent" class="chart-canvas"></canvas>
+              <div class="chart-tooltip hidden"></div>
+            </div>
           </div>
         </div>
       </section>

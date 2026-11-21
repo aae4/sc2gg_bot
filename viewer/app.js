@@ -56,6 +56,8 @@
   const buildOrderListEl = document.getElementById("build-order-list");
   const buildScrollNowBtn = document.getElementById("build-scroll-now-btn");
   const tabBuildEl = document.getElementById("tab-build");
+  const tabChartsEl = document.getElementById("tab-charts");
+  const chartsLegendEl = document.getElementById("charts-legend");
   const battlesListEl = document.getElementById("battles-list");
 
   let currentReplayId = null;
@@ -149,7 +151,7 @@
       return `
         <span class="hud-player-stat">
           <span class="player-dot" style="background:${escapeHtml(p.color_hex || "#fff")}"></span>
-          <span>${st.workers}р • ${st.army}а${valStr}</span>
+          <span><span class="hud-stat-label">Раб</span> ${st.workers} · <span class="hud-stat-label">Арм</span> ${st.army}${valStr}</span>
         </span>
       `;
     });
@@ -177,7 +179,7 @@
       const squadHtml =
         totalNearby > 1
           ? `<div class="inspector-squad">${squad
-              .map(([name, cnt]) => `<span class="squad-chip">${escapeHtml(name)} ×${cnt}</span>`)
+              .map(([name, cnt]) => `<span class="squad-chip">${escapeHtml(formatEntityName(name))} ×${cnt}</span>`)
               .join("")}</div>`
           : "";
 
@@ -185,7 +187,7 @@
         <div class="inspector-header">
           <div class="inspector-title">
             <span class="player-dot" style="background:${escapeHtml(unit.color)}"></span>
-            <span>${escapeHtml(unit.unitName)} • ${escapeHtml(unit.playerName)}</span>
+            <span>${escapeHtml(formatEntityName(unit.unitName))} • ${escapeHtml(unit.playerName)}</span>
           </div>
           <button type="button" class="inspector-close" aria-label="Закрыть">×</button>
         </div>
@@ -205,7 +207,7 @@
           chips.push(`
             <span class="squad-chip">
               <span class="player-dot" style="background:${escapeHtml(g.color)}"></span>
-              <span>${escapeHtml(name)} ×${cnt}</span>
+              <span>${escapeHtml(formatEntityName(name))} ×${cnt}</span>
             </span>
           `);
         }
@@ -246,7 +248,8 @@
         timeDisplayEl.textContent = displayStr;
         lastTimeDisplayStr = displayStr;
       }
-      if (curStr !== lastHudTimeStr) {
+      const timeSecChanged = curStr !== lastHudTimeStr;
+      if (timeSecChanged) {
         hudTimeEl.textContent = curStr;
         lastHudTimeStr = curStr;
       }
@@ -256,9 +259,19 @@
       if (tabBuildEl && tabBuildEl.classList.contains("active")) {
         syncBuildTimeline(cur);
       }
+      if (tabChartsEl && tabChartsEl.classList.contains("active") && timeSecChanged && currentData) {
+        renderCharts(currentData);
+      }
     },
     onPlayStateChange: (playing) => {
-      playPauseBtn.textContent = playing ? "⏸" : "▶";
+      const playIcon = playPauseBtn.querySelector(".icon-play");
+      const pauseIcon = playPauseBtn.querySelector(".icon-pause");
+      if (playIcon && pauseIcon) {
+        playIcon.classList.toggle("hidden", playing);
+        pauseIcon.classList.toggle("hidden", !playing);
+      } else {
+        playPauseBtn.textContent = playing ? "⏸" : "▶";
+      }
     },
     onUnitSelect: (selection) => {
       renderInspector(selection);
@@ -467,7 +480,7 @@
             const victimChip = `
               <span class="battle-kill-unit" style="color:${escapeHtml(victimColor)}">
                 <img class="battle-kill-icon" src="${victimIcon}" alt="" onerror="this.style.display='none'" />
-                <span>${escapeHtml(victimName)}${victimCnt}</span>
+                <span>${escapeHtml(formatEntityName(victimName))}${victimCnt}</span>
               </span>
             `;
 
@@ -482,7 +495,7 @@
             const killerChip = `
               <span class="battle-kill-unit" style="color:${escapeHtml(killerColor)}">
                 <img class="battle-kill-icon" src="${killerIcon}" alt="" onerror="this.style.display='none'" />
-                <span>${escapeHtml(killerName)}${killerCnt}</span>
+                <span>${escapeHtml(formatEntityName(killerName))}${killerCnt}</span>
               </span>
             `;
             return `<span class="battle-kill-chip">${killerChip}<span class="battle-kill-arrow">→ 💀</span>${victimChip}</span>`;
@@ -539,6 +552,36 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  const ENTITY_STATE_SUFFIXES = [
+    "Lowered",
+    "Flying",
+    "Sieged",
+    "Burrowed",
+    "Uprooted",
+    "Phasing",
+  ];
+
+  function formatEntityName(name) {
+    let raw = String(name || "").trim();
+    if (!raw) return "";
+    let suffixLabel = "";
+    for (const suffix of ENTITY_STATE_SUFFIXES) {
+      if (raw.length > suffix.length && raw.endsWith(suffix)) {
+        raw = raw.slice(0, -suffix.length);
+        suffixLabel = ` (${suffix})`;
+        break;
+      }
+    }
+    const spaced = raw
+      .replace(/_/g, " ")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+      .replace(/([a-zA-Z])(\d+)/g, "$1 $2")
+      .replace(/\s+/g, " ")
+      .trim();
+    return `${spaced}${suffixLabel}`;
   }
 
   function resolveReplayId() {
@@ -756,8 +799,8 @@
             </div>
             <div class="player-stats">
               <span>APM ${p.apm || 0}</span>
-              <span>Раб. ${p.workers_peak || 0}</span>
-              <span>Армия ${(p.army_value_peak || 0).toLocaleString("ru-RU")}</span>
+              <span>Пик раб. ${p.workers_peak || 0}</span>
+              <span>Пик армии ${(p.army_value_peak || 0).toLocaleString("ru-RU")}</span>
             </div>
           </div>
         `;
@@ -782,10 +825,11 @@
         const by = Number.isFinite(b.y) ? b.y : "";
         const totalLoss = getBattleTotalLoss(b);
         const ratio = Math.sqrt(totalLoss / maxBattleLoss);
-        const size = Math.round(6 + ratio * 7);
-        const opacity = (0.5 + ratio * 0.5).toFixed(2);
-        const glowAlpha = (0.45 + ratio * 0.5).toFixed(2);
-        const glowRadius = Math.round(4 + ratio * 10);
+        const size = Math.round(6 + ratio * 4);
+        const opacity = (0.6 + ratio * 0.4).toFixed(2);
+        const glowAlpha = (0.35 + ratio * 0.45).toFixed(2);
+        const glowRadius = Math.round(2 + ratio * 4);
+        const zIdx = Math.round(1 + ratio * 5);
         const lossesByPlayer = players.length
           ? players
               .map((p) => (b.lost_minerals?.[p.pid] || 0) + (b.lost_gas?.[p.pid] || 0))
@@ -797,6 +841,7 @@
           `width:${size}px`,
           `height:${size}px`,
           `opacity:${opacity}`,
+          `z-index:${zIdx}`,
           `box-shadow:0 0 ${glowRadius}px rgba(239,68,68,${glowAlpha})`,
         ].join(";");
         return `<span class="battle-marker-dot" tabindex="0" style="${styleAttr}" data-pct="${pct}" data-time="${jumpTime}" data-x="${bx}" data-y="${by}" data-tooltip="${escapeHtml(tooltipText)}" aria-label="${escapeHtml(tooltipText)}"></span>`;
@@ -942,7 +987,7 @@
       <div class="build-item" data-time="${group.start_sec}" data-end-time="${group.end_sec}" style="--player-color:${escapeHtml(color)}">
         ${iconHtml}
         <div class="build-info">
-          <div class="build-name">${escapeHtml(group.name)} ${countHtml}</div>
+          <div class="build-name">${escapeHtml(formatEntityName(group.name))} ${countHtml}</div>
           <div class="build-meta">${escapeHtml(timeText)} • ${escapeHtml(kindLabel)}</div>
         </div>
       </div>
@@ -1076,6 +1121,9 @@
     }, 1200);
   }
 
+  let battlesFilterMode = "all"; // "all" | "major"
+  const MAJOR_BATTLE_LOSS_THRESHOLD = 200;
+
   function renderBattles(data) {
     const battles = data.battles || [];
     if (!battles.length) {
@@ -1084,54 +1132,107 @@
     }
 
     const players = data.players || [];
-    battlesListEl.innerHTML = battles
-      .map((b, idx) => {
-        const sidesHtml = players
-          .map((p) => {
-            const lostMin = b.lost_minerals?.[p.pid] || 0;
-            const lostGas = b.lost_gas?.[p.pid] || 0;
-            const unitsObj = b.units_lost?.[p.pid] || {};
-            const isWinner = b.winner_pid === p.pid;
-            const unitsHtml = Object.entries(unitsObj)
-              .map(([uName, count]) => {
-                const iconSrc = window.resolveUnitIconPath(uName, iconsBase);
+    const indexed = battles.map((b, idx) => ({
+      battle: b,
+      origIdx: idx,
+      totalLoss: getBattleTotalLoss(b),
+    }));
+    const totalAllLosses = indexed.reduce((sum, item) => sum + item.totalLoss, 0);
+    const majorCount = indexed.filter((item) => item.totalLoss >= MAJOR_BATTLE_LOSS_THRESHOLD).length;
+
+    const visible =
+      battlesFilterMode === "major"
+        ? indexed.filter((item) => item.totalLoss >= MAJOR_BATTLE_LOSS_THRESHOLD)
+        : indexed;
+
+    const toolbarHtml = `
+      <div class="battles-toolbar">
+        <div class="battles-summary">
+          <span>Сражений: <strong>${battles.length}</strong></span>
+          <span>•</span>
+          <span>Потери: <strong>${totalAllLosses.toLocaleString("ru-RU")}</strong></span>
+        </div>
+        <div class="chip-group">
+          <button type="button" class="chip ${battlesFilterMode === "all" ? "active" : ""}" data-battle-filter="all">Все (${battles.length})</button>
+          <button type="button" class="chip ${battlesFilterMode === "major" ? "active" : ""}" data-battle-filter="major">Крупные (${majorCount})</button>
+        </div>
+      </div>
+    `;
+
+    const cardsHtml = visible.length
+      ? visible
+          .map(({ battle: b, origIdx, totalLoss }) => {
+            const sidesHtml = players
+              .map((p) => {
+                const lostMin = b.lost_minerals?.[p.pid] || 0;
+                const lostGas = b.lost_gas?.[p.pid] || 0;
+                const unitsObj = b.units_lost?.[p.pid] || {};
+                const isWinner = b.winner_pid === p.pid;
+                const unitsHtml = Object.entries(unitsObj)
+                  .map(([uName, count]) => {
+                    const iconSrc = window.resolveUnitIconPath(uName, iconsBase);
+                    return `
+                      <span class="lost-unit-chip" title="${escapeHtml(formatEntityName(uName))}">
+                        <img src="${iconSrc}" alt="" onerror="this.style.display='none'" />
+                        <span>${escapeHtml(formatEntityName(uName))} ×${count}</span>
+                      </span>
+                    `;
+                  })
+                  .join("");
+
                 return `
-                  <span class="lost-unit-chip" title="${escapeHtml(uName)}">
-                    <img src="${iconSrc}" alt="" onerror="this.style.display='none'" />
-                    <span>${escapeHtml(uName)} ×${count}</span>
-                  </span>
+                  <div class="battle-side" style="border-top: 2px solid ${escapeHtml(p.color_hex || "#fff")}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                      <strong>${escapeHtml(p.name)}</strong>
+                      ${isWinner ? '<span class="result-pill win">WIN</span>' : ""}
+                    </div>
+                    <div class="battle-losses">Потери: ${lostMin} мин / ${lostGas} газ</div>
+                    <div class="lost-units-row">${unitsHtml || '<span class="muted">Без потерь</span>'}</div>
+                  </div>
                 `;
               })
               .join("");
 
+            const barSegsHtml = players.length
+              ? players
+                  .map((p) => {
+                    const pLoss = (b.lost_minerals?.[p.pid] || 0) + (b.lost_gas?.[p.pid] || 0);
+                    const pct = totalLoss > 0 ? (pLoss / totalLoss) * 100 : 100 / players.length;
+                    const color = p.color_hex || "#94a3b8";
+                    return `<div class="battle-hud-bar-seg" style="width:${pct.toFixed(1)}%;background:${escapeHtml(color)}"></div>`;
+                  })
+                  .join("")
+              : "";
+
+            const jumpTime = Math.max(0, b.start_sec - 3);
+            const bx = Number.isFinite(b.x) ? b.x : "";
+            const by = Number.isFinite(b.y) ? b.y : "";
+
             return `
-              <div class="battle-side" style="border-top: 2px solid ${escapeHtml(p.color_hex || "#fff")}">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <strong>${escapeHtml(p.name)}</strong>
-                  ${isWinner ? '<span class="result-pill win">WIN</span>' : ""}
+              <div class="battle-card">
+                <div class="battle-header">
+                  <div class="battle-title-group">
+                    <span class="battle-time">⚔️ Битва #${origIdx + 1} • ${formatTime(b.start_sec)} – ${formatTime(b.end_sec)}</span>
+                    <span class="battle-total-loss">Всего потерь: ${totalLoss.toLocaleString("ru-RU")}</span>
+                  </div>
+                  <button class="btn btn-primary jump-battle-btn" data-time="${jumpTime}" data-x="${bx}" data-y="${by}">▶ На карте</button>
                 </div>
-                <div class="battle-losses">Потери: ${lostMin} мин / ${lostGas} газ</div>
-                <div class="lost-units-row">${unitsHtml || '<span class="muted">Без потерь</span>'}</div>
+                <div class="battle-hud-bar ${totalLoss === 0 ? "is-empty" : ""}">${barSegsHtml}</div>
+                <div class="battle-players">${sidesHtml}</div>
               </div>
             `;
           })
-          .join("");
+          .join("")
+      : `<div class="muted" style="padding:20px;text-align:center;">Нет крупных сражений (≥ ${MAJOR_BATTLE_LOSS_THRESHOLD} ресурсов)</div>`;
 
-        const jumpTime = Math.max(0, b.start_sec - 3);
-        const bx = Number.isFinite(b.x) ? b.x : "";
-        const by = Number.isFinite(b.y) ? b.y : "";
+    battlesListEl.innerHTML = toolbarHtml + cardsHtml;
 
-        return `
-          <div class="battle-card">
-            <div class="battle-header">
-              <span class="battle-time">⚔️ Битва #${idx + 1} • ${formatTime(b.start_sec)} – ${formatTime(b.end_sec)}</span>
-              <button class="btn btn-primary jump-battle-btn" data-time="${jumpTime}" data-x="${bx}" data-y="${by}">▶ На карте</button>
-            </div>
-            <div class="battle-players">${sidesHtml}</div>
-          </div>
-        `;
-      })
-      .join("");
+    battlesListEl.querySelectorAll("[data-battle-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        battlesFilterMode = btn.dataset.battleFilter || "all";
+        renderBattles(data);
+      });
+    });
 
     battlesListEl.querySelectorAll(".jump-battle-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -1148,10 +1249,48 @@
     });
   }
 
+  const chartStates = new Map();
+
+  function computeNiceYMax(rawMax) {
+    const safeMax = Math.max(4, rawMax || 0);
+    const rawStep = safeMax / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const norm = rawStep / mag;
+    let niceNorm = 10;
+    if (norm <= 1) niceNorm = 1;
+    else if (norm <= 2) niceNorm = 2;
+    else if (norm <= 2.5) niceNorm = 2.5;
+    else if (norm <= 5) niceNorm = 5;
+    const step = niceNorm * mag;
+    return Math.max(4, step * 4);
+  }
+
+  function formatChartTick(val) {
+    if (val === 0) return "0";
+    if (val >= 1000) {
+      const k = val / 1000;
+      return Number.isInteger(k) ? `${k}k` : `${k.toFixed(1)}k`;
+    }
+    return String(Math.round(val));
+  }
+
   function renderCharts(data) {
     const charts = data.charts;
     if (!charts || !charts.times_sec?.length) return;
     const players = data.players || [];
+
+    if (chartsLegendEl) {
+      chartsLegendEl.innerHTML = players
+        .map(
+          (p) => `
+            <span class="charts-legend-item">
+              <span class="player-dot" style="background:${escapeHtml(p.color_hex || "#3b82f6")}"></span>
+              <span>${escapeHtml(p.name || `Player ${p.pid}`)}</span>
+            </span>
+          `
+        )
+        .join("");
+    }
 
     drawLineChart("chart-army", charts.times_sec, charts.army_value, players);
     drawLineChart("chart-workers", charts.times_sec, charts.workers, players);
@@ -1159,9 +1298,77 @@
     drawLineChart("chart-unspent", charts.times_sec, charts.unspent_resources, players);
   }
 
+  function bindChartInteraction(canvas, canvasId) {
+    if (canvas.dataset.chartBound === "1") return;
+    canvas.dataset.chartBound = "1";
+
+    const updateFromClientX = (clientX) => {
+      const state = chartStates.get(canvasId);
+      if (!state || !state.times.length) return;
+      const rect = canvas.getBoundingClientRect();
+      const relX = clientX - rect.left;
+      const clampedX = Math.max(state.padL, Math.min(state.w - state.padR, relX));
+      const ratio = (clampedX - state.padL) / Math.max(1, state.plotW);
+      const targetTime = ratio * state.maxTime;
+
+      let bestIdx = 0;
+      let bestDiff = Infinity;
+      for (let i = 0; i < state.times.length; i++) {
+        const diff = Math.abs(state.times[i] - targetTime);
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          bestIdx = i;
+        }
+      }
+      state.hoverIdx = bestIdx;
+      renderSingleChart(state);
+    };
+
+    const clearHover = () => {
+      const state = chartStates.get(canvasId);
+      if (!state || state.hoverIdx === null) return;
+      state.hoverIdx = null;
+      renderSingleChart(state);
+    };
+
+    canvas.addEventListener("pointerdown", (e) => updateFromClientX(e.clientX));
+    canvas.addEventListener("pointermove", (e) => {
+      if (e.pointerType === "touch" && e.buttons === 0) return;
+      updateFromClientX(e.clientX);
+    });
+    canvas.addEventListener("pointerleave", clearHover);
+    canvas.addEventListener("pointercancel", clearHover);
+  }
+
   function drawLineChart(canvasId, times, seriesByPid, players) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
+    bindChartInteraction(canvas, canvasId);
+
+    const prevState = chartStates.get(canvasId);
+    const state = {
+      canvasId,
+      canvas,
+      times,
+      seriesByPid,
+      players,
+      hoverIdx: prevState ? prevState.hoverIdx : null,
+      w: 320,
+      h: 180,
+      padL: 42,
+      padR: 10,
+      padT: 14,
+      padB: 24,
+      plotW: 268,
+      plotH: 142,
+      maxTime: times[times.length - 1] || 1,
+    };
+    chartStates.set(canvasId, state);
+    renderSingleChart(state);
+  }
+
+  function renderSingleChart(state) {
+    const { canvas, times, seriesByPid, players, hoverIdx } = state;
     const rect = canvas.getBoundingClientRect();
     const w = rect.width || 320;
     const h = rect.height || 180;
@@ -1175,18 +1382,30 @@
 
     const padL = 42;
     const padR = 10;
-    const padT = 16;
-    const padB = 22;
+    const padT = 14;
+    const padB = 24;
     const plotW = Math.max(10, w - padL - padR);
     const plotH = Math.max(10, h - padT - padB);
+    const maxTime = times[times.length - 1] || 1;
 
-    let maxVal = 1;
+    state.w = w;
+    state.h = h;
+    state.padL = padL;
+    state.padR = padR;
+    state.padT = padT;
+    state.padB = padB;
+    state.plotW = plotW;
+    state.plotH = plotH;
+    state.maxTime = maxTime;
+
+    let rawMax = 1;
     for (const p of players) {
       const arr = seriesByPid?.[p.pid] || [];
       for (const v of arr) {
-        if (v > maxVal) maxVal = v;
+        if (v > rawMax) rawMax = v;
       }
     }
+    const maxVal = computeNiceYMax(rawMax);
 
     // Grid
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
@@ -1199,11 +1418,10 @@
       ctx.moveTo(padL, y);
       ctx.lineTo(w - padR, y);
       ctx.stroke();
-      const val = Math.round(maxVal * (1 - i / 4));
-      ctx.fillText(val >= 1000 ? `${(val / 1000).toFixed(1)}k` : String(val), 4, y + 3);
+      const val = maxVal * (1 - i / 4);
+      ctx.fillText(formatChartTick(val), 4, y + 3);
     }
 
-    const maxTime = times[times.length - 1] || 1;
     for (let i = 0; i <= 4; i++) {
       const t = Math.round((maxTime * i) / 4);
       const x = padL + (plotW * i) / 4;
@@ -1224,6 +1442,72 @@
         else ctx.lineTo(x, y);
       }
       ctx.stroke();
+    }
+
+    // Current playback position line
+    const curTime = player?.currentTime || 0;
+    if (curTime > 0 && curTime <= maxTime) {
+      const cx = padL + (curTime / maxTime) * plotW;
+      ctx.save();
+      ctx.strokeStyle = "rgba(241, 245, 249, 0.45)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(cx, padT);
+      ctx.lineTo(cx, padT + plotH);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Hover crosshair + tooltip
+    const tooltipEl = canvas.parentElement?.querySelector(".chart-tooltip");
+    if (hoverIdx !== null && hoverIdx >= 0 && hoverIdx < times.length) {
+      const hx = padL + (times[hoverIdx] / maxTime) * plotW;
+      ctx.save();
+      ctx.strokeStyle = "rgba(59, 130, 246, 0.7)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hx, padT);
+      ctx.lineTo(hx, padT + plotH);
+      ctx.stroke();
+      ctx.restore();
+
+      for (const p of players) {
+        const arr = seriesByPid?.[p.pid] || [];
+        const val = arr[hoverIdx];
+        if (val === undefined) continue;
+        const hy = padT + plotH - (val / maxVal) * plotH;
+        ctx.beginPath();
+        ctx.fillStyle = p.color_hex || "#3b82f6";
+        ctx.arc(hx, hy, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#0b0f17";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      if (tooltipEl) {
+        const rowsHtml = players
+          .map((p) => {
+            const val = seriesByPid?.[p.pid]?.[hoverIdx];
+            const valStr = val !== undefined ? Math.round(val).toLocaleString("ru-RU") : "—";
+            return `
+              <div class="chart-tooltip-row">
+                <span class="player-dot" style="background:${escapeHtml(p.color_hex || "#3b82f6")}"></span>
+                <span>${escapeHtml(p.name || `P${p.pid}`)}: <strong>${valStr}</strong></span>
+              </div>
+            `;
+          })
+          .join("");
+        tooltipEl.innerHTML = `<div class="chart-tooltip-time">${formatTime(times[hoverIdx])}</div>${rowsHtml}`;
+        tooltipEl.classList.remove("hidden");
+
+        const onRight = hx < w * 0.55;
+        tooltipEl.style.left = onRight ? `${Math.min(w - 130, hx + 8)}px` : "auto";
+        tooltipEl.style.right = onRight ? "auto" : `${Math.max(8, w - hx + 8)}px`;
+      }
+    } else if (tooltipEl) {
+      tooltipEl.classList.add("hidden");
     }
   }
 
