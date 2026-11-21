@@ -349,6 +349,11 @@ html, body {
   height: 7px;
 }
 
+.hud-stat-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
 .hud-vs {
   color: var(--text-muted);
   font-weight: 400;
@@ -405,6 +410,7 @@ html, body {
 }
 
 .battle-hud-action {
+  position: relative;
   pointer-events: auto;
   width: 16px;
   height: 16px;
@@ -419,6 +425,12 @@ html, body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.battle-hud-action::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
 }
 
 .battle-hud-action:hover {
@@ -524,11 +536,19 @@ html, body {
 
 @media (max-width: 520px) {
   .battle-hud-overlay {
-    top: 58px;
+    top: 56px;
     width: calc(100% - 20px);
     max-width: 340px;
-    padding: 5px 8px;
-    gap: 3px;
+    padding: 4px 8px;
+    gap: 2px;
+  }
+
+  .battle-hud-header {
+    font-size: 10.5px;
+  }
+
+  .battle-hud-losses {
+    font-size: 10.5px;
   }
 
   .battle-hud-side-name {
@@ -572,6 +592,16 @@ html, body {
   border-color: var(--accent);
 }
 
+.map-mode-controls {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  z-index: 3;
+}
+
 .zoom-controls {
   position: absolute;
   right: 10px;
@@ -610,7 +640,7 @@ html, body {
 
 .unit-tooltip {
   position: absolute;
-  bottom: 10px;
+  bottom: 52px;
   left: 10px;
   max-width: calc(100% - 62px);
   max-height: 45%;
@@ -643,13 +673,20 @@ html, body {
 }
 
 .inspector-close {
+  position: relative;
   border: none;
   background: transparent;
   color: var(--text-muted);
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
-  padding: 0 2px;
+  padding: 2px 6px;
+}
+
+.inspector-close::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
 }
 
 .inspector-ranges {
@@ -714,8 +751,8 @@ html, body {
   position: absolute;
   left: 0;
   right: 0;
-  top: 0;
-  height: 14px;
+  top: 1px;
+  height: 12px;
   pointer-events: none;
   z-index: 2;
 }
@@ -727,11 +764,18 @@ html, body {
   height: 7px;
   border-radius: 50%;
   background: var(--danger);
+  border: 1.5px solid var(--bg-secondary);
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.7);
   pointer-events: auto;
   cursor: pointer;
   transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.battle-marker-dot::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
 }
 
 .battle-marker-dot:hover,
@@ -827,14 +871,14 @@ html, body {
   }
 
   .btn-play {
-    width: 34px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
   }
 
   .btn-ctrl {
-    height: 32px;
-    min-width: 28px;
-    padding: 0 6px;
+    height: 36px;
+    min-width: 30px;
+    padding: 0 7px;
     font-size: 11px;
   }
 
@@ -846,16 +890,31 @@ html, body {
   .controls-right {
     width: 100%;
     justify-content: space-between;
+    gap: 8px;
   }
 
-  .diff-metric-group,
+  .diff-metric-wrap,
   .speed-group {
     flex: 1;
+    min-height: 34px;
+  }
+
+  .diff-metric-group {
+    flex: 1;
+    min-height: 34px;
+  }
+
+  .diff-metric-label span {
+    display: none;
   }
 
   .diff-metric-btn,
   .speed-btn {
     flex: 1;
+    min-height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
   }
 }
@@ -865,6 +924,22 @@ html, body {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.diff-metric-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diff-metric-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .diff-metric-group,
@@ -905,20 +980,25 @@ html, body {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .chip-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
+}
+
+.filter-kinds-row {
+  width: 100%;
+  align-items: center;
 }
 
 .chip {
   border: 1px solid var(--border);
   background: var(--bg-secondary);
   color: var(--text-muted);
-  padding: 5px 10px;
+  padding: 4px 9px;
   border-radius: 999px;
   font-size: 12px;
   cursor: pointer;
@@ -1157,7 +1237,7 @@ html, body {
   align-items: center;
   gap: 5px;
   flex-wrap: wrap;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .build-count {
@@ -1211,6 +1291,26 @@ html, body {
 }
 
 /* Charts */
+.charts-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+}
+
+.charts-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .charts-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -1239,10 +1339,47 @@ html, body {
   color: var(--text-muted);
 }
 
+.chart-canvas-wrap {
+  position: relative;
+  width: 100%;
+}
+
 .chart-canvas {
   width: 100%;
   height: 180px;
   display: block;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 6px;
+  pointer-events: none;
+  background: rgba(11, 15, 23, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-primary);
+  white-space: nowrap;
+  z-index: 5;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.chart-tooltip-time {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Battles */
@@ -1250,6 +1387,30 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.battles-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.battles-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.battles-summary strong {
+  color: var(--text-primary);
 }
 
 .battle-card {
@@ -1269,9 +1430,22 @@ html, body {
   gap: 8px;
 }
 
+.battle-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .battle-time {
   font-weight: 700;
   font-size: 14px;
+}
+
+.battle-total-loss {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .battle-players {
